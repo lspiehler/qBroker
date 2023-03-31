@@ -16,6 +16,7 @@ class Broker {
     private $servers;
     private $lbserver;
     private $format;
+    private $balancer;
 
     public function __construct($format)
     {
@@ -39,9 +40,23 @@ class Broker {
                 'server' => array()
             )
         );
-        $balancer = new Balancer();
-        $this->servers = $balancer->getServers();
-        $this->lbserver = $balancer->getBrokeredServer();
+        $this->balancer = new Balancer();
+        $this->servers = $this->balancer->getServers();
+    }
+
+    public function getActiveServers() {
+        $this->httpbody['result'] = 'success';
+        $this->httpbody['message'] = null;
+        $this->httpbody['active_server_count'] = count($this->servers);
+        $this->httpbody['active_servers']['server'] = $this->servers;
+        $this->httpresponse['status'] = 200;
+        if($this->format=='xml') {
+            $this->httpresponse['headers']['Content-type'] = 'application/xml';
+        } else {
+            $this->httpresponse['headers']['Content-type'] = 'application/json';
+        }
+        $this->httpresponse['body'] = $this->formatHttpBody($this->httpbody);
+        return $this->httpresponse;
     }
 
     private function formatHttpBody(array $response): string {
@@ -65,8 +80,8 @@ class Broker {
         return "\\\\" . $this->lbserver . "\\" . $queue;
     } 
 
-    public function getMappings($computer, $user)
-    {
+    public function getMappings($computer, $user) {
+        $this->lbserver = $this->balancer->getBrokeredServer();
         $computer = strtoupper($computer);
         $user = strtoupper($user);
         if (file_exists($this->config['mount_dir'] . "/" . $this->config['computer_dir'])) {
