@@ -31,11 +31,14 @@ class Broker {
         $this->httpbody = array(
             'result' => null,
             'message' => null,
-            'print_mapping_count' => 0,
+            //'monitor' => $this->config['monitor'],
+            //'monitor_interval' => $this->config['monitor_interval'],
+            //'kill_active_monitors' => $this->config['kill_active_monitors'],
+            /*'print_mapping_count' => 0,
             'active_server_count' => 0,
             'print_mappings' => array(
                 'mapping' => array()
-            ),
+            ),*/
             'active_servers' => array(
                 'server' => array()
             )
@@ -47,6 +50,8 @@ class Broker {
     public function getActiveServers() {
         $this->httpbody['result'] = 'success';
         $this->httpbody['message'] = null;
+        $this->httpbody['monitor_interval'] = $this->config['monitor_interval'];
+        $this->httpbody['kill_active_monitors'] = $this->config['kill_active_monitors'];
         $this->httpbody['active_server_count'] = count($this->servers);
         $this->httpbody['active_servers']['server'] = $this->servers;
         $this->httpresponse['status'] = 200;
@@ -134,6 +139,8 @@ class Broker {
             if(count($mappingsht) < 1) {
                 $this->httpbody['result'] = 'success';
                 $this->httpbody['message'] = null;
+                //$this->httpbody['monitor_interval'] = $this->config['monitor_interval'];
+                $this->httpbody['monitor'] = false;
                 //$this->httpbody['print_mappings']['mapping'] = $mappings;
                 $this->httpbody['active_servers']['server'] = $this->servers;
                 $this->httpresponse['status'] = 200;
@@ -164,6 +171,8 @@ class Broker {
                 }
                 $this->httpbody['result'] = 'success';
                 $this->httpbody['message'] = null;
+                $this->httpbody['monitor'] = $this->config['monitor'];
+                $this->httpbody['monitor_interval'] = $this->config['monitor_interval'];
                 $this->httpbody['print_mapping_count'] = count($mappings);
                 $this->httpbody['active_server_count'] = count($this->servers);
                 $this->httpbody['print_mappings']['mapping'] = $mappings;
