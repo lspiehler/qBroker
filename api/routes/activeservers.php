@@ -27,6 +27,7 @@ foreach($response['headers'] as $key => $value) {
   header($key . ": " . $value);
 }
 http_response_code($response['status']);
+//http_response_code(400);
 echo $response['body'];
 
 ?>
