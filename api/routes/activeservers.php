@@ -4,7 +4,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-//$config = include('config.php');
+//$config = include('../config.php');
 require 'include/broker.php';
 // set expires header
 header('Expires: Thu, 1 Jan 1970 00:00:00 GMT');
