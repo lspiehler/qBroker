@@ -18,6 +18,9 @@ switch($request['path'][1]) {
     case 'activeservers':
         include('./routes/activeservers.php');
         break;
+    case 'check':
+        include('./routes/check.php');
+        break;
     default:
         http_response_code(404);
         print_r($request);
