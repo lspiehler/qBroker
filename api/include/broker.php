@@ -1,6 +1,6 @@
 <?php
 
-require 'vendor/autoload.php';
+require '../vendor/autoload.php';
 require 'balancer.php';
 
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
@@ -22,7 +22,7 @@ class Broker {
     {
         //echo $format;
         $this->format = $format;
-        $this->config = require('config.php');
+        $this->config = require('../config.php');
         $this->httpresponse = array(
             'status' => null,
             'headers' => array(),
