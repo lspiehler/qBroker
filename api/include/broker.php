@@ -1,11 +1,6 @@
 <?php
 
-require '../vendor/autoload.php';
 require 'balancer.php';
-
-use Symfony\Component\Serializer\Encoder\XmlEncoder;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
-use Symfony\Component\Serializer\Serializer;
 
 class Broker {
 
@@ -23,60 +18,23 @@ class Broker {
         //echo $format;
         $this->format = $format;
         $this->config = require('../config.php');
-        $this->httpresponse = array(
-            'status' => null,
-            'headers' => array(),
-            'body' => null
-        );
-        $this->httpbody = array(
-            'result' => null,
-            'message' => null,
-            //'monitor' => $this->config['monitor'],
-            //'monitor_interval' => $this->config['monitor_interval'],
-            //'kill_active_monitors' => $this->config['kill_active_monitors'],
-            /*'print_mapping_count' => 0,
-            'active_server_count' => 0,
-            'print_mappings' => array(
-                'mapping' => array()
-            ),*/
-            'active_servers' => array(
-                'server' => array()
-            )
-        );
+        require_once('httpresponse.php');
+        $this->hrc = new HTTPResponse();
+        $this->httpresponse = $this->hrc->getHTTPResponse();
         $this->balancer = new Balancer();
         $this->servers = $this->balancer->getServers();
     }
 
     public function getActiveServers() {
-        $this->httpbody['result'] = 'success';
-        $this->httpbody['message'] = null;
-        $this->httpbody['monitor_interval'] = $this->config['monitor_interval'];
-        $this->httpbody['kill_active_monitors'] = $this->config['kill_active_monitors'];
-        $this->httpbody['active_server_count'] = count($this->servers);
-        $this->httpbody['active_servers']['server'] = $this->servers;
+        $this->httpresponse['body']['result'] = 'success';
+        $this->httpresponse['body']['message'] = null;
+        $this->httpresponse['body']['monitor_interval'] = $this->config['monitor_interval'];
+        $this->httpresponse['body']['kill_active_monitors'] = $this->config['kill_active_monitors'];
+        $this->httpresponse['body']['active_server_count'] = count($this->servers);
+        $this->httpresponse['body']['active_servers']['server'] = $this->servers;
         $this->httpresponse['status'] = 200;
-        if($this->format=='xml') {
-            $this->httpresponse['headers']['Content-type'] = 'application/xml';
-        } else {
-            $this->httpresponse['headers']['Content-type'] = 'application/json';
-        }
-        $this->httpresponse['body'] = $this->formatHttpBody($this->httpbody);
+        $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
         return $this->httpresponse;
-    }
-
-    private function formatHttpBody(array $response): string {
-        if($this->format=="json") {
-            return json_encode($response);
-        } else if($this->format=="xml") {
-            $encoder = [new XmlEncoder()];
-            $normalizer = [new ObjectNormalizer()];
-            $serializer = new Serializer($normalizer, $encoder);
-            $response = $serializer->serialize($response, 'xml');
-            //echo $response;
-            return $response;
-        } else {
-            return json_encode($response);
-        }
     }
 
     private function updatePath(string $path): string {
@@ -137,19 +95,14 @@ class Broker {
                 }
             }
             if(count($mappingsht) < 1) {
-                $this->httpbody['result'] = 'success';
-                $this->httpbody['message'] = null;
-                //$this->httpbody['monitor_interval'] = $this->config['monitor_interval'];
-                $this->httpbody['monitor'] = false;
-                //$this->httpbody['print_mappings']['mapping'] = $mappings;
-                $this->httpbody['active_servers']['server'] = $this->servers;
+                $this->httpresponse['body']['result'] = 'success';
+                $this->httpresponse['body']['message'] = null;
+                //$this->httpresponse['body']['monitor_interval'] = $this->config['monitor_interval'];
+                $this->httpresponse['body']['monitor'] = false;
+                //$this->httpresponse['body']['print_mappings']['mapping'] = $mappings;
+                $this->httpresponse['body']['active_servers']['server'] = $this->servers;
                 $this->httpresponse['status'] = 200;
-                if($this->format=='xml') {
-                    $this->httpresponse['headers']['Content-type'] = 'application/xml';
-                } else {
-                    $this->httpresponse['headers']['Content-type'] = 'application/json';
-                }
-                $this->httpresponse['body'] = $this->formatHttpBody($this->httpbody);
+                $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
             } else {
                 $mappingsht[$this->default]['default'] = true;
                 $mappings = array();
@@ -169,29 +122,23 @@ class Broker {
                     );
                     array_push($mappings, $mapping);
                 }
-                $this->httpbody['result'] = 'success';
-                $this->httpbody['message'] = null;
-                $this->httpbody['monitor'] = $this->config['monitor'];
-                $this->httpbody['monitor_interval'] = $this->config['monitor_interval'];
-                $this->httpbody['print_mapping_count'] = count($mappings);
-                $this->httpbody['active_server_count'] = count($this->servers);
-                $this->httpbody['print_mappings']['mapping'] = $mappings;
-                $this->httpbody['active_servers']['server'] = $this->servers;
+                $this->httpresponse['body']['result'] = 'success';
+                $this->httpresponse['body']['message'] = null;
+                $this->httpresponse['body']['monitor'] = $this->config['monitor'];
+                $this->httpresponse['body']['monitor_interval'] = $this->config['monitor_interval'];
+                $this->httpresponse['body']['print_mapping_count'] = count($mappings);
+                $this->httpresponse['body']['active_server_count'] = count($this->servers);
+                $this->httpresponse['body']['print_mappings']['mapping'] = $mappings;
+                $this->httpresponse['body']['active_servers']['server'] = $this->servers;
                 $this->httpresponse['status'] = 200;
-                if($this->format=='xml') {
-                    $this->httpresponse['headers']['Content-type'] = 'application/xml';
-                } else {
-                    $this->httpresponse['headers']['Content-type'] = 'application/json';
-                }
-                $this->httpresponse['body'] = $this->formatHttpBody($this->httpbody);
+                $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
             }
             return $this->httpresponse;
         } else {
-            $this->httpbody['result'] = 'error';
-            $this->httpbody['message'] = 'failed to access mapping smb share';
+            $this->httpresponse['body']['result'] = 'error';
+            $this->httpresponse['body']['message'] = 'failed to access mapping smb share';
             $this->httpresponse['status'] = 503;
-            $this->httpresponse['headers']['Content-type'] = 'application/json';
-            $this->httpresponse['body'] = $this->formatHttpBody($this->httpbody);
+            $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
             return $this->httpresponse;
         }
     }
