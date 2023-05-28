@@ -1,7 +1,7 @@
 Option Explicit
 'On Error Resume Next
 
-Dim wshShell, strEngine, verbose, scriptname, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname
+Dim wshShell, strEngine, verbose, scriptname, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount
 
 removeunmanagedqueues = True
 takeaction = True
@@ -360,6 +360,7 @@ Function checkMappedQueues(onlineservers, equeues)
 		Else
 			path = "\\" & server & "\" & queue
 			writeOutput(server & " was not found in the online server list for " & path)
+			writeOutput("Requesting queues to be remapped because at least one was found on an inactive server")
 			checkMappedQueues = true
 			Exit Function
 		End If
@@ -437,6 +438,7 @@ Function mapQueues()
 					Next
 					Set print_mapping_count = Root.getElementsByTagName("print_mapping_count")
 					mappingcount = Clng(print_mapping_count(0).text)
+					expectedmappingcount = mappingcount
 					If mappingcount < 1 Then
 						writeOutput("No mappings were found using the supplied parameters")
 					Else
@@ -618,16 +620,21 @@ Function checkServers
 				Set active_servers = Nothing
 			
 				Set ep = getExistingPrinters
-						
-				remap = checkMappedQueues(activeservers, ep)
 				
+				'this may happen if a workstation is brokered a print server that is offline and all queues fail to map
+				If ep.count = 0 And expectedmappingcount > 0 Then
+					writeOutput("Requesting queues to be remapped because " & ep.count & " queues were found and expected mapping count is " & expectedmappingcount)
+					remap = true
+				Else
+					remap = checkMappedQueues(activeservers, ep)
+				End If
+					
 				Set activeservers = Nothing
 				Set ep = Nothing
 							
 				If remap = false Then
 					writeOutput("Mapped queues are all on active servers")
 				Else
-					writeOutput("Requesting queues to be remapped because at least one was found on an inactive server")
 					mapQueues
 				End If	
 			End If
