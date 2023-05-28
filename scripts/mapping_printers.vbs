@@ -93,10 +93,16 @@ Function setDefaultPrinter(printer)
  
 	Set colInstalledPrinters =  objWMIService.ExecQuery(printerquery) 
  
+	On Error Resume Next
+	Err.Clear
 	For Each objPrinter in colInstalledPrinters
 		'WScript.Echo objPrinter.Name 
     		objPrinter.SetDefaultPrinter() 
 	Next
+	If Err Then
+		writeOutput(Replace(Err.Description,vbLf,""))
+	End If
+	On Error GoTo 0
 	
 	Set objWMIService = Nothing
 	Set colInstalledPrinters = Nothing
@@ -497,7 +503,13 @@ Function mapQueues()
 							
 							WScript.Sleep 3000
 							If takeaction = True Then
+								On Error Resume Next
+								Err.Clear
 								WshNetwork.SetDefaultPrinter dq
+								If Err Then
+									writeOutput(Replace(Err.Description,vbLf,""))
+								End If
+								On Error GoTo 0
 								setDefaultPrinter(dq)
 							End If
 							
