@@ -100,7 +100,7 @@ Function setDefaultPrinter(printer)
     		objPrinter.SetDefaultPrinter() 
 	Next
 	If Err Then
-		writeOutput(Replace(Err.Description,vbLf,""))
+		writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
 	End If
 	On Error GoTo 0
 	
@@ -173,7 +173,7 @@ Function mapMissingQueues(bqueues, equeues, dqueue)
 				Err.Clear
 				WshNetwork.AddWindowsPrinterConnection path
 				If Err Then
-					writeOutput(Replace(Err.Description,vbLf,""))
+					writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
 				End If
 				On Error GoTo 0
 			End If
@@ -301,7 +301,7 @@ Function removeBadQueues(onlineservers, bqueues, equeues)
 				WSHNetwork.RemovePrinterConnection path, true, true
 				If Err Then
 					'if removal fails, printer might be stuck, try adding again and then removing by uncommenting below
-					writeOutput(Replace(Err.Description,vbLf,""))
+					writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
 					'WSHNetwork.AddWindowsPrinterConnection path
 					'WSHNetwork.RemovePrinterConnection path, true, true
 				End If
@@ -327,7 +327,7 @@ Function httpRequest(url)
 	'restReq.setRequestHeader "Content-Type", "application/json"
 	restReq.send
 	If Err Then
-		writeOutput(Replace(Err.Description,vbLf,""))
+		writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
 		httpRequest = false
 		Exit Function
 	End If
@@ -509,7 +509,7 @@ Function mapQueues()
 								Err.Clear
 								WshNetwork.SetDefaultPrinter dq
 								If Err Then
-									writeOutput(Replace(Err.Description,vbLf,""))
+									writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
 								End If
 								On Error GoTo 0
 								setDefaultPrinter(dq)
