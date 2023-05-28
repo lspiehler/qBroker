@@ -306,6 +306,8 @@ Function removeBadQueues(onlineservers, bqueues, equeues)
 					'WSHNetwork.RemovePrinterConnection path, true, true
 				End If
 				On Error GoTo 0
+				'wait one second after each queue removal, attempting to prevent failed removals
+				WScript.Sleep 1000
 			End If
 		Else
 			remaining.Add equeues(i)
