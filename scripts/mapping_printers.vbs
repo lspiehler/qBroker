@@ -54,7 +54,7 @@ Function getEnvVariable(envvar, wait)
 End Function
 
 Function getCitrixHostname()
-	Dim WshShell, clientnamekey, strComputer, objRegistry, dwValue, strKeyPath
+	Dim clientnamekey, strComputer, objRegistry, dwValue, strKeyPath
 
 	Const HKEY_LOCAL_MACHINE = &H80000002
 
@@ -174,6 +174,14 @@ Function mapMissingQueues(bqueues, equeues, dqueue)
 				WshNetwork.AddWindowsPrinterConnection path
 				If Err Then
 					writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
+					writeOutput("Decreasing expectedmappingcount by 1 because the queue failed to map")
+					expectedmappingcount = expectedmappingcount - 1
+					'WScript.Echo "-2147023095"
+					'WScript.Echo "0" & CStr(Err.Number) & "0"
+					'If Str("" & Err.Number & "") = Str("-2147023095") Then
+					'	writeOutput("Decreasing expectedmappingcount by 1 because error number " + Err.Number + " usually means the queue name does not exist")
+					'	expectedmappingcount = expectedmappingcount - 1
+					'End If
 				End If
 				On Error GoTo 0
 			End If
@@ -381,9 +389,11 @@ Function mapQueues()
 	computername = getCitrixHostname
 	
 	while success = false
-		Dim xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval
+		Dim url, xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval
 	
-		xml = httpRequest("https://printermappings.lcmchealth.org/api/mappings/" & computername & "/" & username & "?format=xml")
+		url = "https://printermappings.lcmchealth.org/api/mappings/" & computername & "/" & username & "?format=xml"
+	
+		xml = httpRequest(url)
 
 		If xml = false Then
 			writeOutput("HTTP request failure. Trying again in " & failure_retry_interval / 1000 & " seconds")
@@ -442,6 +452,7 @@ Function mapQueues()
 					mappingcount = Clng(print_mapping_count(0).text)
 					expectedmappingcount = mappingcount
 					If mappingcount < 1 Then
+						WshShell.LogEvent 0, "No mappings were found using the supplied parameters in request to " & url
 						writeOutput("No mappings were found using the supplied parameters")
 					Else
 						Set print_mappings = Root.getElementsByTagName("print_mappings")
@@ -623,8 +634,9 @@ Function checkServers
 			
 				Set ep = getExistingPrinters
 				
-				'this may happen if a workstation is brokered a print server that is offline and all queues fail to map
+				'this may happen if a workstation is brokered a print server that is offline and all queues fail to map or a queue was manually deleted
 				If ep.count = 0 And expectedmappingcount > 0 Then
+				'If expectedmappingcount = 0 or ep.count <> expectedmappingcount Then
 					writeOutput("Requesting queues to be remapped because " & ep.count & " queues were found and expected mapping count is " & expectedmappingcount)
 					remap = true
 				Else
