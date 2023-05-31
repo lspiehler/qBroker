@@ -255,16 +255,19 @@ Function checkManagedQueue(bqueues, equeue)
 	checkManagedQueue = False
 End Function
 
-Function checkDuplicateQueue(index, equeues)
-	Dim i, qname
+Function checkDuplicateQueue(index, qname, equeues)
+	Dim i, parsed, server, queue
 	
-	qname = UCase(equeues(i).Item("queue"))
+	qname = UCase(qname)
 	
 	For i = 0 to equeues.Count - 1 Step 1
 		If i = index Then
 			'ignore
 		Else
-			If qname = UCase(equeues(i)) Then
+			parsed = parseQueue(equeues(i))
+			server = parsed(0)
+			queue = parsed(1)
+			If qname = UCase(queue) Then
 				checkDuplicateQueue = True
 				Exit Function
 			End If
@@ -272,6 +275,39 @@ Function checkDuplicateQueue(index, equeues)
 	Next
 	
 	checkDuplicateQueue = False
+End Function
+
+Function removeDuplicateQueues(equeues)
+	Dim i, WshNetwork, path, parsed, server, queue
+	
+	Set WshNetwork = WScript.CreateObject("WScript.Network")
+	'Set remaining = CreateObject( "System.Collections.ArrayList" )
+
+	'For i = 0 to equeues.Count - 1 Step 1
+	'	remaining.Add(equeues(i))
+		'If checkDuplicateQueue(i, equeues) = True Then
+	'Next
+	
+	i = 0
+	While i < equeues.count
+		parsed = parseQueue(equeues(i))
+		server = parsed(0)
+		queue = parsed(1)
+		path = "\\" & server & "\" & queue
+		If checkDuplicateQueue(i, queue, equeues) = True Then
+			writeOutput(path & " will be removed because duplicate detection found another queue mapped with the same name")
+			WshShell.LogEvent 4, path & " will be removed because duplicate detection found another queue mapped with the same name"
+			WSHNetwork.RemovePrinterConnection path, true, true
+			equeues.RemoveAt(i)
+		Else
+			i = i + 1
+			'WScript.Echo queue & " is not a duplicate"
+		End If
+	Wend
+	
+	Set WshNetwork = Nothing
+	
+	Set removeDuplicateQueues = equeues
 End Function
 
 Function removeBadQueues(onlineservers, bqueues, equeues)
@@ -289,6 +325,7 @@ Function removeBadQueues(onlineservers, bqueues, equeues)
 		If checkManagedQueue(bqueues, equeues(i)) = False Then
 			If removeunmanagedqueues = True Then
 				writeOutput("Removing unmanaged queue " & path)
+				WshShell.LogEvent 4, path & " will be removed because no mapping was found for it"
 				delete = True
 			Else
 				writeOutput("Skipping removal of unmanaged queue " & path & " because removeunmanagedqueues = False")
@@ -389,7 +426,7 @@ Function mapQueues()
 	computername = getCitrixHostname
 	
 	while success = false
-		Dim url, xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval
+		Dim url, xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rqd, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval
 	
 		url = "https://printermappings.lcmchealth.org/api/mappings/" & computername & "/" & username & "?format=xml"
 	
@@ -452,7 +489,7 @@ Function mapQueues()
 					mappingcount = Clng(print_mapping_count(0).text)
 					expectedmappingcount = mappingcount
 					If mappingcount < 1 Then
-						WshShell.LogEvent 0, "No mappings were found using the supplied parameters in request to " & url
+						WshShell.LogEvent 4, "No mappings were found using the supplied parameters in request to " & url
 						writeOutput("No mappings were found using the supplied parameters")
 					Else
 						Set print_mappings = Root.getElementsByTagName("print_mappings")
@@ -505,7 +542,13 @@ Function mapQueues()
 							'get existing mappings
 							Set ep = getExistingPrinters
 							
-							Set rq = removeBadQueues(activeservers, mappings, ep)
+							Set rqd = removeDuplicateQueues(ep)
+							
+							Set rq = removeBadQueues(activeservers, mappings, rqd)
+							
+							Set rqd = Nothing
+							
+							WshShell.LogEvent 4, "The following printers will be mapped per the response from " & url & ": " & vbCrlf & vbCrlf & Join(mappings.ToArray, vbCrlf)
 							
 							dq = mapMissingQueues(mappings, rq, dqueue)
 							
