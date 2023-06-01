@@ -1,7 +1,7 @@
 Option Explicit
 'On Error Resume Next
 
-Dim wshShell, strEngine, verbose, scriptname, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount
+Dim wshShell, strEngine, verbose, scriptname, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount
 
 removeunmanagedqueues = True
 takeaction = True
@@ -140,7 +140,7 @@ Function queueExists(bqueue, equeues)
 	bserver = bparsed(0)
 	bq = bparsed(1)
 	
-	For i = 0 to equeues.Count - 1 Step 1
+	For i = 0 to UBound(equeues) Step 1
 		parsed = parseQueue(equeues(i))
 		server = parsed(0)
 		queue = parsed(1)
@@ -160,7 +160,7 @@ Function mapMissingQueues(bqueues, equeues, dqueue)
 	
 	Set WshNetwork = WScript.CreateObject("WScript.Network")
 	
-	For i = 0 to bqueues.Count - 1 Step 1
+	For i = 0 to UBound(bqueues) Step 1
 		bparsed = parseQueue(bqueues(i))
 		bserver = bparsed(0)
 		bq = bparsed(1)
@@ -203,19 +203,20 @@ Function mapMissingQueues(bqueues, equeues, dqueue)
 End Function
 
 Function getExistingPrinters()
-	Dim WshNetwork, existprinters, i, queues, splitqueue, servername, queuename
+	Dim WshNetwork, existprinters, i, queues, splitqueue, servername, queuename, j
+	ReDim queues(-1)
 
 	Set WshNetwork = WScript.CreateObject("WScript.Network")
 
 	Set existprinters = WshNetwork.EnumPrinterConnections
 	
-	Set queues = CreateObject( "System.Collections.ArrayList" )
+	'Set queues = CreateObject( "System.Collections.ArrayList" )
 	
 	Set WshNetwork = Nothing
 	
 	'Set getExistingPrinters = queues
 	'Exit Function
-
+	j = 0
 	For i = 0 to existprinters.Count - 1 Step 1
 		If Left(ucase(existprinters.Item(i)),2) = "\\" Then
 			'Set queue = CreateObject("Scripting.Dictionary")
@@ -224,13 +225,16 @@ Function getExistingPrinters()
 			'queuename = splitqueue(3)
 			'queue.Add "server", servername
 			'queue.Add "queue", queuename
-			queues.Add existprinters.Item(i)
+			ReDim Preserve queues(UBound(queues) + 1)
+			queues(j) = existprinters.Item(i)
+			j = j + 1
+			'queues.Add existprinters.Item(i)
 		End If
 	Next
 	
 	Set existprinters = Nothing
 	
-	Set getExistingPrinters = queues
+	getExistingPrinters = queues
 		
 End Function
 
@@ -241,7 +245,7 @@ Function checkManagedQueue(bqueues, equeue)
 	eserver = eparsed(0)
 	eq = eparsed(1)
 	
-	For i = 0 to bqueues.Count - 1 Step 1
+	For i = 0 to UBound(bqueues) Step 1
 		bparsed = parseQueue(bqueues(i))
 		bserver = bparsed(0)
 		bq = bparsed(1)
@@ -260,7 +264,7 @@ Function checkDuplicateQueue(index, qname, equeues)
 	
 	qname = UCase(qname)
 	
-	For i = 0 to equeues.Count - 1 Step 1
+	For i = 0 to UBound(equeues) Step 1
 		If i = index Then
 			'ignore
 		Else
@@ -277,19 +281,32 @@ Function checkDuplicateQueue(index, qname, equeues)
 	checkDuplicateQueue = False
 End Function
 
+Function removeIndexFromArray(index, array)
+	Dim newarray, i, j
+
+	ReDim newarray(-1)
+	'Set remaining = CreateObject( "System.Collections.ArrayList" )
+	
+	j = 0
+	For i = 0 to UBound(array) Step 1
+		If i <> index Then
+			ReDim Preserve newarray(UBound(newarray) + 1)
+			newarray(j) = array(i)
+			j = j + 1
+		End If
+	Next
+	
+	removeIndexFromArray = newarray
+	
+End Function
+
 Function removeDuplicateQueues(equeues)
-	Dim i, WshNetwork, path, parsed, server, queue
+	Dim i, j, WshNetwork, path, parsed, server, queue, remaining, updatedarray
 	
 	Set WshNetwork = WScript.CreateObject("WScript.Network")
-	'Set remaining = CreateObject( "System.Collections.ArrayList" )
 
-	'For i = 0 to equeues.Count - 1 Step 1
-	'	remaining.Add(equeues(i))
-		'If checkDuplicateQueue(i, equeues) = True Then
-	'Next
-	
 	i = 0
-	While i < equeues.count
+	While i < UBound(equeues) + 1
 		parsed = parseQueue(equeues(i))
 		server = parsed(0)
 		queue = parsed(1)
@@ -298,7 +315,15 @@ Function removeDuplicateQueues(equeues)
 			writeOutput(path & " will be removed because duplicate detection found another queue mapped with the same name")
 			WshShell.LogEvent 4, path & " will be removed because duplicate detection found another queue mapped with the same name"
 			WSHNetwork.RemovePrinterConnection path, true, true
-			equeues.RemoveAt(i)
+			'equeues.RemoveAt(i)
+			'WScript.Echo Join(equeues, ",")
+			updatedarray = removeIndexFromArray(i, equeues)
+			ReDim equeues(UBound(updatedarray))
+			For j = 0 to UBound(updatedarray) Step 1
+				equeues(j) = updatedarray(j)
+			Next
+			Erase updatedarray
+			'WScript.Echo Join(equeues, ",")
 		Else
 			i = i + 1
 			'WScript.Echo queue & " is not a duplicate"
@@ -307,16 +332,18 @@ Function removeDuplicateQueues(equeues)
 	
 	Set WshNetwork = Nothing
 	
-	Set removeDuplicateQueues = equeues
+	removeDuplicateQueues = equeues
 End Function
 
 Function removeBadQueues(onlineservers, bqueues, equeues)
-	Dim i, WshNetwork, path, remaining, delete, parsed, server, queue
+	Dim i, j, WshNetwork, path, remaining, delete, parsed, server, queue
 	
 	Set WshNetwork = WScript.CreateObject("WScript.Network")
-	Set remaining = CreateObject( "System.Collections.ArrayList" )
+	ReDim remaining(-1)
+	'Set remaining = CreateObject( "System.Collections.ArrayList" )
 
-	For i = 0 to equeues.Count - 1 Step 1
+	j = 0
+	For i = 0 to UBound(equeues) Step 1
 		delete = False
 		parsed = parseQueue(equeues(i))
 		server = parsed(0)
@@ -331,7 +358,7 @@ Function removeBadQueues(onlineservers, bqueues, equeues)
 				writeOutput("Skipping removal of unmanaged queue " & path & " because removeunmanagedqueues = False")
 			End If
 		Else
-			If onlineservers.Contains(UCase(server)) Then
+			If strInArray(UCase(server), onlineservers) Then
 				writeOutput(server & " is still online for " & queue)
 			Else
 				writeOutput(server & " was not found in the online server list for " & path)
@@ -355,13 +382,16 @@ Function removeBadQueues(onlineservers, bqueues, equeues)
 				WScript.Sleep 1000
 			End If
 		Else
-			remaining.Add equeues(i)
+			ReDim Preserve remaining(UBound(remaining) + 1)
+			remaining(j) = equeues(i)
+			j = j + 1
+			'remaining.Add equeues(i)
 		End If
 	Next
 	
 	Set WshNetwork = Nothing
 	
-	Set removeBadQueues = remaining
+	removeBadQueues = remaining
 End Function
 
 Function httpRequest(url)
@@ -398,11 +428,11 @@ End Function
 Function checkMappedQueues(onlineservers, equeues)
 	Dim i, remaining, path, parsed, server, queue
 	
-	For i = 0 to equeues.Count - 1 Step 1
+	For i = 0 to UBound(equeues) Step 1
 		parsed = parseQueue(equeues(i))
 		server = parsed(0)
 		queue = parsed(1)
-		If onlineservers.Contains(UCase(server)) Then
+		If strInArray(UCase(server), onlineservers) = True Then
 			writeOutput(server & " is still online for " & queue)
 		Else
 			path = "\\" & server & "\" & queue
@@ -426,7 +456,10 @@ Function mapQueues()
 	computername = getCitrixHostname
 	
 	while success = false
-		Dim url, xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rqd, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval
+		Dim url, xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rqd, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval, i
+	
+		ReDim mappings(-1)
+		ReDim activeservers(-1)
 	
 		url = "https://printermappings.lcmchealth.org/api/mappings/" & computername & "/" & username & "?format=xml"
 	
@@ -439,7 +472,7 @@ Function mapQueues()
 			'make sure workstations has .NET
 			On Error Resume Next
 			Err.Clear
-			Set mappings = CreateObject( "System.Collections.ArrayList" )
+			'Set mappings = CreateObject( "System.Collections.ArrayList" )
 			If Err Then
 				writeOutput("Workstation does not have .NET installed. Quitting...")
 				WScript.Quit
@@ -478,24 +511,32 @@ Function mapQueues()
 					Else
 						monitor_interval = false
 					End If
-					Set activeservers = CreateObject( "System.Collections.ArrayList" )
+					'Set activeservers = CreateObject( "System.Collections.ArrayList" )
 					Set active_servers = Root.getElementsByTagName("active_servers")
 					'WScript.Echo len(NodeList)
+					i = 0
 					For Each activeserver In active_servers(0).childNodes
 						'WScript.Echo activeserver.text
-						activeservers.Add UCase(activeserver.text)
+						ReDim Preserve activeservers(UBound(activeservers) + 1)
+						activeservers(i) = UCase(activeserver.text)
+						i = i + 1
+						'activeservers.Add UCase(activeserver.text)
 					Next
 					Set print_mapping_count = Root.getElementsByTagName("print_mapping_count")
 					mappingcount = Clng(print_mapping_count(0).text)
 					expectedmappingcount = mappingcount
+					returnedmappingcount = mappingcount
 					If mappingcount < 1 Then
 						WshShell.LogEvent 4, "No mappings were found using the supplied parameters in request to " & url
 						writeOutput("No mappings were found using the supplied parameters")
 					Else
+						'WScript.Echo UBound(mappings)
 						Set print_mappings = Root.getElementsByTagName("print_mappings")
 						'WScript.Echo len(NodeList)
 						defq = false
+						i = 0
 						For Each mappingelem In print_mappings(0).childNodes
+							ReDim Preserve mappings(UBound(mappings) + 1)
 							'Set sources = CreateObject( "System.Collections.ArrayList" )
 							'Set mapping = CreateObject("Scripting.Dictionary")
 							'mapping.Add "source",sources
@@ -522,7 +563,9 @@ Function mapQueues()
 								End If
 							Next
 							path = "\\" & LCase(server) & "\" & LCase(queue)
-							mappings.Add path
+							'WScript.Echo i
+							mappings(i) = path
+							i = i + 1
 							If defq = true Then
 								dqueue = queue
 							End If
@@ -537,18 +580,19 @@ Function mapQueues()
 						
 						'WScript.Echo dqueue
 						'if we have mappings
-						If mappings.count > 0 Then
+						If UBound(mappings) > 0 Then
 						
 							'get existing mappings
-							Set ep = getExistingPrinters
+							ep = getExistingPrinters
+							'WScript.Echo UBound(ep)
 							
-							Set rqd = removeDuplicateQueues(ep)
+							rqd = removeDuplicateQueues(ep)
 							
-							Set rq = removeBadQueues(activeservers, mappings, rqd)
+							rq = removeBadQueues(activeservers, mappings, rqd)
 							
-							Set rqd = Nothing
+							Erase rqd
 							
-							WshShell.LogEvent 4, "The following printers will be mapped per the response from " & url & ": " & vbCrlf & vbCrlf & Join(mappings.ToArray, vbCrlf)
+							WshShell.LogEvent 4, "The following printers will be mapped per the response from " & url & ": " & vbCrlf & vbCrlf & Join(mappings, vbCrlf)
 							
 							dq = mapMissingQueues(mappings, rq, dqueue)
 							
@@ -571,8 +615,8 @@ Function mapQueues()
 								setDefaultPrinter(dq)
 							End If
 							
-							Set ep = Nothing
-							Set rq = Nothing
+							Erase ep
+							Erase rq
 							Set WshNetwork = Nothing
 							
 							'WScript.Sleep 30000
@@ -582,7 +626,7 @@ Function mapQueues()
 					End If
 				End If
 				Set Root = Nothing
-				Set mappings = Nothing
+				Erase mappings
 			End If
 		End If
 	Wend
@@ -625,8 +669,10 @@ Function getXMLTextValue(xmlroot, tagname)
 End Function
 
 Function checkServers
-	Dim activeservers, active_servers, Root, objXMLDoc, servercount, active_server_count, activeserver, ep, remap, xml, monitor_interval, kill_active_monitors
-		
+	Dim activeservers, active_servers, Root, objXMLDoc, servercount, active_server_count, activeserver, ep, remap, xml, monitor_interval, kill_active_monitors, i
+	
+	ReDim activeservers(-1)
+	
 	monitor_interval = failure_monitor_interval
 	xml = httpRequest("https://printermappings.lcmchealth.org/api/activeservers?format=xml")
 	If xml = false Then
@@ -662,32 +708,38 @@ Function checkServers
 				Else
 					monitor_interval = getXMLTextValue(Root, "monitor_interval")
 				End If
-				Set activeservers = CreateObject( "System.Collections.ArrayList" )
+				'Set activeservers = CreateObject( "System.Collections.ArrayList" )
 				Set active_servers = Root.getElementsByTagName("active_servers")
 
 				Set Root = Nothing
 
 				'WScript.Echo len(NodeList)
+				i = 0
 				For Each activeserver In active_servers(0).childNodes
 					'WScript.Echo activeserver.text
-					activeservers.Add UCase(activeserver.text)
+					'activeservers.Add UCase(activeserver.text)
+					ReDim Preserve activeservers(UBound(activeservers) + 1)
+					activeservers(i) = UCase(activeserver.text)
+					i = i + 1
 				Next
 				
 				Set active_servers = Nothing
 			
-				Set ep = getExistingPrinters
+				ep = getExistingPrinters
 				
 				'this may happen if a workstation is brokered a print server that is offline and all queues fail to map or a queue was manually deleted
-				If ep.count = 0 And expectedmappingcount > 0 Then
+				'WScript.Echo UBound(ep)
+				'If UBound(ep) + 1 = 0 Then
+				If UBound(ep) + 1 = 0 And returnedmappingcount > 0 Then
 				'If expectedmappingcount = 0 or ep.count <> expectedmappingcount Then
-					writeOutput("Requesting queues to be remapped because " & ep.count & " queues were found and expected mapping count is " & expectedmappingcount)
+					writeOutput("Requesting queues to be remapped because " & UBound(ep) + 1 & " queues were found and returned mapping count is " & returnedmappingcount)
 					remap = true
 				Else
 					remap = checkMappedQueues(activeservers, ep)
 				End If
 					
-				Set activeservers = Nothing
-				Set ep = Nothing
+				Erase activeservers
+				Erase ep
 							
 				If remap = false Then
 					writeOutput("Mapped queues are all on active servers")
