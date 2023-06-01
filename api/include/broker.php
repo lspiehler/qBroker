@@ -101,6 +101,8 @@ class Broker {
                 $this->httpresponse['body']['monitor'] = false;
                 //$this->httpresponse['body']['print_mappings']['mapping'] = $mappings;
                 $this->httpresponse['body']['active_servers']['server'] = $this->servers;
+                $this->httpresponse['body']['print_mapping_count'] = 0;
+                $this->httpresponse['body']['active_server_count'] = count($this->servers);
                 $this->httpresponse['status'] = 200;
                 $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
             } else {
