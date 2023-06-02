@@ -1,7 +1,7 @@
 Option Explicit
 'On Error Resume Next
 
-Dim wshShell, strEngine, verbose, scriptname, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount
+Dim wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount
 
 removeunmanagedqueues = True
 takeaction = True
@@ -14,6 +14,7 @@ strEngine = UCase( Right( WScript.FullName, 12 ) )
 verbose = False
 failure_retry_interval = 30000
 failure_monitor_interval = 300000
+locked_workstation_interval = 60000
 
 If strEngine = "\CSCRIPT.EXE" Then
 	verbose = True
@@ -456,7 +457,7 @@ Function mapQueues()
 	computername = getCitrixHostname
 	
 	while success = false
-		Dim url, xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rqd, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval, i
+		Dim url, xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rbq, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval, i
 	
 		ReDim mappings(-1)
 		ReDim activeservers(-1)
@@ -586,11 +587,11 @@ Function mapQueues()
 							ep = getExistingPrinters
 							'WScript.Echo UBound(ep)
 							
-							rqd = removeDuplicateQueues(ep)
+							rbq = removeBadQueues(activeservers, mappings, ep)
 							
-							rq = removeBadQueues(activeservers, mappings, rqd)
+							rq = removeDuplicateQueues(rbq)
 							
-							Erase rqd
+							Erase rbq
 							
 							WshShell.LogEvent 4, "The following printers will be mapped per the response from " & url & ": " & vbCrlf & vbCrlf & Join(mappings, vbCrlf)
 							
@@ -761,8 +762,8 @@ Function serverMonitor
 
 	Do While true
 		If workstationLocked Then
-			writeOutput("Workstation is locked. Skipping server status check for " & monitor_interval / 1000 & " seconds")
-			WScript.Sleep Clng(monitor_interval)
+			writeOutput("Workstation is locked. Skipping server status check for " & locked_workstation_interval / 1000 & " seconds")
+			WScript.Sleep Clng(locked_workstation_interval)
 		Else
 			monitor_interval = checkServers
 			If monitor_interval = false Then
