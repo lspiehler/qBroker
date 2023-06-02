@@ -24,6 +24,32 @@ var spec = {
 	   }
 	],
 	"paths": {
+		"/activeservers": {
+			"get": {
+			   "tags": [
+				  "activeservers"
+			   ],
+			   "summary": "Request active servers",
+			   "description": "",
+			   "responses": {
+				"200": {
+					"description": "OK",
+					"content": {
+						"application/json": {
+							"schema": {
+							   "type": "string"
+							}
+						 },
+						 "application/xml": {
+							"schema": {
+							   "type": "string"
+							}
+						 }
+					}
+				 }
+			 }
+			}
+		},
 	   "/mappings/{computername}/{username}": {
 		  "get": {
 			 "tags": [
@@ -79,7 +105,7 @@ var spec = {
 	},
 	"servers": [
 	   {
-		  "url": "https://printermappings.lcmchealth.org/api"
+		  "url": "/api"
 	   }
 	]
  }
