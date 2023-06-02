@@ -1,5 +1,12 @@
 <?php
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+//default to http 500 in case only errors are shown, if successful, http code will be updated
+http_response_code(500);
+
 $request = array();
 
 $request['method'] = $_SERVER['REQUEST_METHOD'];
@@ -26,6 +33,10 @@ switch($route) {
         break;
     case 'check':
         include('./routes/check.php');
+        break;
+    case 'dns':
+        $records = dns_get_record("_qbroker._tcp.lcmchealth.org", DNS_SRV);
+        print_r($records);
         break;
     case "":
         include('./views/swagger.php');
