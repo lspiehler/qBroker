@@ -402,7 +402,7 @@ Function httpRequest(url)
 	On Error Resume Next
 	Err.Clear
 	restReq.open "GET", url, false
-	'restReq.setRequestHeader "Content-Type", "application/json"
+	restReq.setRequestHeader "Accept", "application/xml"
 	restReq.send
 	If Err Then
 		writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
@@ -462,7 +462,7 @@ Function mapQueues()
 		ReDim mappings(-1)
 		ReDim activeservers(-1)
 	
-		url = "https://printermappings.lcmchealth.org/api/mappings/" & computername & "/" & username & "?format=xml"
+		url = "https://printermappings.lcmchealth.org/api/mappings/" & computername & "/" & username
 	
 		xml = httpRequest(url)
 
@@ -675,7 +675,7 @@ Function checkServers
 	ReDim activeservers(-1)
 	
 	monitor_interval = failure_monitor_interval
-	xml = httpRequest("https://printermappings.lcmchealth.org/api/activeservers?format=xml")
+	xml = httpRequest("https://printermappings.lcmchealth.org/api/activeservers")
 	If xml = false Then
 		writeOutput("http request failure")
 	Else
