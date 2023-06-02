@@ -175,7 +175,7 @@ Function mapMissingQueues(bqueues, equeues, dqueue)
 				WshNetwork.AddWindowsPrinterConnection path
 				If Err Then
 					writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
-					writeOutput("Decreasing expectedmappingcount by 1 because the queue failed to map")
+					writeOutput("Decreasing expected mapping count by 1 because the queue failed to map")
 					expectedmappingcount = expectedmappingcount - 1
 					'WScript.Echo "-2147023095"
 					'WScript.Echo "0" & CStr(Err.Number) & "0"
