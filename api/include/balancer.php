@@ -3,20 +3,51 @@
 class Balancer {
 
     private array $servers;
+    private array $config;
+    private $srvlookup;
 
-    public function __construct() {
-        $this->servers = array(
-            'NOEH-PRNT01',
-            'LCMC-PRTSRV1'
-        );
+    public function __construct($config) {
+        $this->config = $config;
+        require_once('srvlookup.php');
+        $this->srvlookup = new SRVLookup($this->config);
     }
 
     public function getServers(): array {
-        return $this->servers;
+        /*$this->servers = array(
+            'lcmc-prtsrv01',
+            'lcmc-prtsrv02',
+            'lcmc-prtsrv03'
+        );
+        return array(
+            'error' => false,
+            'servers' => $this->servers
+        );*/
+        $lookup = $this->srvlookup->lookupServers();
+        $this->servers = array();
+        $ttl = 0;
+        if($lookup["error"] === FALSE) {
+            for($i = 0; $i < count($lookup["records"]); $i++) {
+                $ttl = $lookup["records"][$i]["ttl"];
+                array_push($this->servers, explode(".", $lookup["records"][$i]["target"])[0]);
+            }
+            return array(
+                'error' => false,
+                //'ttl' => $ttl,
+                'servers' => $this->servers
+            );
+        } else {
+            return array(
+                'error' => $lookup["error"]
+            );
+        }
     }
 
-    public function getBrokeredServer(): string {
-        return $this->servers[array_rand($this->servers, 1)];
+    public function getBrokeredServer(): array {
+        return array(
+            'error' => false,
+            //'server' => $this->servers[array_rand($this->servers, 1)]
+            'server' => $this->servers[0]
+        );
     }
 }
 

@@ -21,11 +21,23 @@ class Broker {
         require_once('httpresponse.php');
         $this->hrc = new HTTPResponse();
         $this->httpresponse = $this->hrc->getHTTPResponse();
-        $this->balancer = new Balancer();
-        $this->servers = $this->balancer->getServers();
+        $this->balancer = new Balancer($this->config);
+    }
+
+    private function returnErrorResponse(int $httpcode, string $message): array {
+        $this->httpresponse['body']['result'] = 'error';
+        $this->httpresponse['body']['message'] = $message;
+        $this->httpresponse['status'] = $httpcode;
+        $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
+        return $this->httpresponse;
     }
 
     public function getActiveServers() {
+        $servers = $this->balancer->getServers();
+        if($servers["error"] !== FALSE) {
+            return $this->returnErrorResponse(503, $servers["error"]);
+        }
+        $this->servers = $servers["servers"];
         $this->httpresponse['body']['result'] = 'success';
         $this->httpresponse['body']['message'] = null;
         $this->httpresponse['body']['monitor_interval'] = $this->config['monitor_interval'];
@@ -44,7 +56,16 @@ class Broker {
     } 
 
     public function getMappings($computer, $user) {
-        $this->lbserver = $this->balancer->getBrokeredServer();
+        $servers = $this->balancer->getServers();
+        if($servers["error"] !== FALSE) {
+            return $this->returnErrorResponse(503, $servers["error"]);
+        }
+        $this->servers = $servers["servers"];
+        $lbserver = $this->balancer->getBrokeredServer();
+        if($lbserver["error"] !== FALSE) {
+            return $this->returnErrorResponse(503, $lbserver["error"]);
+        }
+        $this->lbserver = $lbserver["server"];
         $computer = strtoupper($computer);
         $user = strtoupper($user);
         if (file_exists($this->config['mount_dir'] . "/" . $this->config['computer_dir'])) {
@@ -137,11 +158,7 @@ class Broker {
             }
             return $this->httpresponse;
         } else {
-            $this->httpresponse['body']['result'] = 'error';
-            $this->httpresponse['body']['message'] = 'failed to access mapping smb share';
-            $this->httpresponse['status'] = 503;
-            $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
-            return $this->httpresponse;
+            return $this->returnErrorResponse(503, 'failed to access mapping smb share');
         }
     }
 
