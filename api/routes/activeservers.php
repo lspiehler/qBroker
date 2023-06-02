@@ -19,8 +19,16 @@ header('Cache-Control: post-check=0, pre-check=0',false);
 header('Pragma: no-cache');
 
 $format = 'json';
-if(array_key_exists('format', $request['query'])) {
-    $format = $request['query']['format'];
+$headers = getallheaders();
+if(array_key_exists('accept', $headers)) {
+  if(strpos($headers['accept'], "application/xml") !== FALSE) {
+    $format = "xml";
+  }
+}
+if(array_key_exists('Accept', $headers)) {
+  if(strpos($headers['Accept'], "application/xml") !== FALSE) {
+    $format = "xml";
+  }
 }
 
 $broker = new Broker($format);
