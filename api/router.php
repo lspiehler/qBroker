@@ -11,7 +11,13 @@ if(array_key_exists('query', $request['uri'])) {
     parse_str($request['uri']['query'], $request['query']);
 }
 
-switch($request['path'][1]) {
+$route = "";
+
+if(count($request['path']) >= 2) {
+    $route = $request['path'][1];
+}
+
+switch($route) {
     case 'mappings':
         include('./routes/mappings.php');
         break;
@@ -21,9 +27,17 @@ switch($request['path'][1]) {
     case 'check':
         include('./routes/check.php');
         break;
+    case "":
+        include('./views/swagger.php');
+        break;
     default:
-        http_response_code(404);
-        print_r($request);
+        if(file_exists('./views/' . $route)) {
+            include('./views/' . $route);
+        } else {
+            http_response_code(404);
+            print_r(getallheaders());
+            print_r($request);
+        }
 }
 
 ?>
