@@ -1,12 +1,5 @@
 <?php
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-//default to http 500 in case only errors are shown, if successful, http code will be updated
-http_response_code(500);
-
 try {
   $config = include('../config.php');
 
