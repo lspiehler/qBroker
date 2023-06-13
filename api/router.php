@@ -38,11 +38,18 @@ switch($route) {
         $records = dns_get_record("_qbroker._tcp.lcmchealth.org", DNS_SRV);
         print_r($records);
         break;
+        /*$config = include('../config.php');
+        require './include/balancer.php';
+        $balancer = new Balancer($config);
+        print_r($balancer->getServers());*/
+        break;
     case "":
+        http_response_code(200);
         include('./views/swagger.php');
         break;
     default:
         if(file_exists('./views/' . $route)) {
+            http_response_code(200);
             include('./views/' . $route);
         } else {
             http_response_code(404);
