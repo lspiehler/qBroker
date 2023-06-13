@@ -27,8 +27,11 @@ class Balancer {
         $ttl = 0;
         if($lookup["error"] === FALSE) {
             for($i = 0; $i < count($lookup["records"]); $i++) {
-                $ttl = $lookup["records"][$i]["ttl"];
-                array_push($this->servers, explode(".", $lookup["records"][$i]["target"])[0]);
+                if($lookup["records"][$i]["weight"] !== 0) {
+                    $ttl = $lookup["records"][$i]["ttl"];
+                    //array_push($this->servers, explode(".", $lookup["records"][$i]["target"])[0]);
+                    array_push($this->servers, $lookup["records"][$i]["target"]);
+                }
             }
             return array(
                 'error' => false,
