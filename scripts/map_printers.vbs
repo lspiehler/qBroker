@@ -1,7 +1,13 @@
 Option Explicit
 'On Error Resume Next
 
-Dim wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount
+Dim NamedArgs, Arg, scriptid, scriptuser, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount
+
+Set NamedArgs = WScript.Arguments.Named
+
+'For Each Arg In NamedArgs
+'	WScript.Echo Arg & " = " & NamedArgs.Item(Arg)
+'Next
 
 removeunmanagedqueues = True
 takeaction = True
@@ -9,16 +15,53 @@ scriptname = Wscript.ScriptName
 
 Set wshShell = CreateObject( "WScript.Shell" )
 
-strEngine = UCase( Right( WScript.FullName, 12 ) )
+strEngine = UCase( Right( WScript.FullName, 11 ) )
 
 verbose = False
 failure_retry_interval = 30000
 failure_monitor_interval = 300000
 locked_workstation_interval = 60000
 
-If strEngine = "\CSCRIPT.EXE" Then
+If NamedArgs.Exists("id") And NamedArgs.Exists("user") Then
+	'WScript.Echo "ID exists"
+Else
+	Dim strArgs, strCmd
+	For Each Arg In NamedArgs
+		strArgs = strArgs & " /" & Arg & ":" & NamedArgs.Item(Arg)
+	Next
+	If strEngine = "CSCRIPT.EXE" Then
+		strCmd = "CSCRIPT.EXE //NoLogo """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true)
+	Else
+		strCmd = "WSCRIPT.EXE """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true)
+	End If
+	wshShell.Run strCmd
+	'WScript.Echo strCmd
+	'WScript.Echo strEngine
+	'WScript.Echo strArgs
+	'WScript.Echo RandomString(20)
+	WScript.Quit
+End If
+
+scriptid = NamedArgs.Item("id")
+scriptuser = NamedArgs.Item("user")
+
+If strEngine = "CSCRIPT.EXE" Then
 	verbose = True
 End If
+
+Function RandomString( ByVal strLen )
+    Dim str, min, max, i
+
+    Const LETTERS = "abcdefghijklmnopqrstuvwxyz0123456789"
+    min = 1
+    max = Len(LETTERS)
+
+    Randomize
+    For i = 1 to strLen
+        str = str & Mid( LETTERS, Int((max-min+1)*Rnd+min), 1 )
+    Next
+    RandomString = str
+End Function
 
 Function getADSite()
 	Dim objADSysInfo
@@ -778,7 +821,7 @@ Function serverMonitor
 End Function
 
 Function checkAlreadyRunning
-	Dim objWMIService, objProcess, colProcess
+	Dim objWMIService, colProcess
 	Dim strComputer, strList
 	strComputer = "."
 	Set objWMIService = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2")
@@ -789,6 +832,25 @@ Function checkAlreadyRunning
 		Exit Function
 	End If
 	checkAlreadyRunning = false
+End Function
+
+Function killExisting
+	Dim objWMIService, objProcess, colProcess
+	Dim strComputer, strList
+	strComputer = "."
+	Set objWMIService = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2")
+	Set colProcess = objWMIService.ExecQuery ("Select * from Win32_Process WHERE (Name = 'wscript.exe' OR Name = 'cscript.exe') AND CommandLine LIKE '%" & scriptname & "%'")
+	'WScript.Echo colProcess.count
+	For Each objProcess in colProcess
+		'only delete the matching processes that aren't the currently running process
+		'WScript.Echo InStr(objProcess.CommandLine, "/id:" & scriptid)
+		If InStr(objProcess.CommandLine, "/id:" & scriptid) < 1 Then
+			If InStr(objProcess.CommandLine, "/user:" & scriptuser) >= 1 Then
+				objProcess.Terminate()
+			End If
+			'Exit Function
+		End If
+	Next
 End Function
 
 Function strInArray(str, arr)
@@ -820,17 +882,18 @@ osname = getOSName
 If InStr(UCase(osname), "SERVER") < 1 Then
 	site = getADSite
 	If strInArray(site, Array("TOURO", "NOEH", "UMC", "")) Then
+		killExisting
 		monitor_interval = mapQueues
 		If monitor_interval = false Then
 			writeOutput("Active server monitoring is disabled, the script will terminate now")
 		Else
-			If checkAlreadyRunning = false Then
+			'If checkAlreadyRunning = false Then
 				writeOutput("Monitoring is enabled, checking active servers in " & monitor_interval / 1000 & " seconds")
 				WScript.Sleep Clng(monitor_interval)
 				serverMonitor
-			Else
-				writeOutput("The script will terminate now because another copy of the process is already running")
-			End If
+			'Else
+			'	writeOutput("The script will terminate now because another copy of the process is already running")
+			'End If
 		End If
 	Else
 		writeOutput("Terminating because site " & site & " was not found in the enabled site list")
