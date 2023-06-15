@@ -1,7 +1,7 @@
 Option Explicit
 'On Error Resume Next
 
-Dim NamedArgs, Arg, scriptid, scriptuser, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount
+Dim NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount
 
 Set NamedArgs = WScript.Arguments.Named
 
@@ -22,6 +22,14 @@ failure_retry_interval = 30000
 failure_monitor_interval = 300000
 locked_workstation_interval = 60000
 
+If NamedArgs.Exists("delay") Then
+	delay = CInt(NamedArgs.Item("delay"))
+Else
+	delay = 0
+End If
+
+delaycalculated = delay * 1000
+
 If NamedArgs.Exists("id") And NamedArgs.Exists("user") Then
 	'WScript.Echo "ID exists"
 Else
@@ -30,9 +38,9 @@ Else
 		strArgs = strArgs & " /" & Arg & ":" & NamedArgs.Item(Arg)
 	Next
 	If strEngine = "CSCRIPT.EXE" Then
-		strCmd = "CSCRIPT.EXE //NoLogo """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true)
+		strCmd = "CSCRIPT.EXE //NoLogo """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay)
 	Else
-		strCmd = "WSCRIPT.EXE """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true)
+		strCmd = "WSCRIPT.EXE """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay)
 	End If
 	wshShell.Run strCmd
 	'WScript.Echo strCmd
@@ -44,6 +52,8 @@ End If
 
 scriptid = NamedArgs.Item("id")
 scriptuser = NamedArgs.Item("user")
+
+Set NamedArgs = Nothing
 
 If strEngine = "CSCRIPT.EXE" Then
 	verbose = True
@@ -831,6 +841,10 @@ Function checkAlreadyRunning
 		checkAlreadyRunning = true
 		Exit Function
 	End If
+	
+	Set objWMIService = Nothing
+	Set colProcess = Nothing
+	
 	checkAlreadyRunning = false
 End Function
 
@@ -846,11 +860,15 @@ Function killExisting
 		'WScript.Echo InStr(objProcess.CommandLine, "/id:" & scriptid)
 		If InStr(objProcess.CommandLine, "/id:" & scriptid) < 1 Then
 			If InStr(objProcess.CommandLine, "/user:" & scriptuser) >= 1 Then
+				writeOutput("A duplicate process was found. Killing it...")
 				objProcess.Terminate()
 			End If
 			'Exit Function
 		End If
 	Next
+	
+	Set objWMIService = Nothing
+	Set colProcess = Nothing
 End Function
 
 Function strInArray(str, arr)
@@ -882,6 +900,10 @@ osname = getOSName
 If InStr(UCase(osname), "SERVER") < 1 Then
 	site = getADSite
 	If strInArray(site, Array("TOURO", "NOEH", "UMC", "")) Then
+		If delay <> 0 Then
+			writeOutput("Delaying " & delay & " second(s) before starting...")
+			WScript.Sleep delaycalculated
+		End If
 		killExisting
 		monitor_interval = mapQueues
 		If monitor_interval = false Then
