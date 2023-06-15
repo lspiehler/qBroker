@@ -38,7 +38,8 @@ switch($route) {
         $records = dns_get_record("_qbroker._tcp.lcmchealth.org", DNS_SRV);
         print_r($records);
         break;
-        /*$config = include('../config.php');
+        /*$json = file_get_contents('../config.js');
+        $config = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         require './include/balancer.php';
         $balancer = new Balancer($config);
         print_r($balancer->getServers());*/

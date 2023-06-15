@@ -1,7 +1,25 @@
 <?php
 
+$format = 'json';
+$headers = getallheaders();
+if(array_key_exists('accept', $headers)) {
+  if(strpos($headers['accept'], "application/xml") !== FALSE) {
+    $format = "xml";
+  }
+}
+if(array_key_exists('Accept', $headers)) {
+  if(strpos($headers['Accept'], "application/xml") !== FALSE) {
+    $format = "xml";
+  }
+}
+
 try {
-  $config = include('../config.php');
+  //$config = include('../config.php');
+  $json = file_get_contents('../config.js');
+  //echo $json;
+  $config = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+
+  //print_r($config);
 
   require 'include/broker.php';
   // set expires header
@@ -14,23 +32,9 @@ try {
   // set pragma header
   header('Pragma: no-cache');
 
-  $format = 'json';
-  $headers = getallheaders();
-  if(array_key_exists('accept', $headers)) {
-    if(strpos($headers['accept'], "application/xml") !== FALSE) {
-      $format = "xml";
-    }
-  }
-  if(array_key_exists('Accept', $headers)) {
-    if(strpos($headers['Accept'], "application/xml") !== FALSE) {
-      $format = "xml";
-    }
-  }
-
-
   //print_r($request);
 
-  $broker = new Broker($format);
+  $broker = new Broker($config, $format);
   $response = $broker->getMappings($request['path'][2], $request['path'][3]);
 
   // test exception

@@ -13,11 +13,15 @@ class Broker {
     private $format;
     private $balancer;
 
-    public function __construct($format)
+    public function __construct($config, $format)
     {
         //echo $format;
         $this->format = $format;
-        $this->config = require('../config.php');
+        //$json = file_get_contents('../config.js');
+        //echo $json;
+        //$this->config = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        $this->config = $config;
+        //$this->config = require('../config.php');
         require_once('httpresponse.php');
         $this->hrc = new HTTPResponse();
         $this->httpresponse = $this->hrc->getHTTPResponse();
