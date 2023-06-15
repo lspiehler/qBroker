@@ -49,9 +49,9 @@ class Broker {
         return $this->httpresponse;
     }
 
-    private function updatePath(string $path): string {
+    private function updatePath(string $queue): string {
         //$server = explode("\\", $path)[2];
-        $queue = explode("\\", $path)[3];
+        //$queue = explode("\\", $path)[3];
         return "\\\\" . $this->lbserver . "\\" . $queue;
     } 
 
@@ -73,20 +73,21 @@ class Broker {
             if (file_exists($this->config['mount_dir'] . "/" . $this->config['computer_dir'] . "/" . $computer . ".txt")) {
                 $filemappings = file($this->config['mount_dir'] . "/" . $this->config['computer_dir'] . "/" . $computer. ".txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
                 for($i = 0; $i < count($filemappings); $i++) {
-                    $isdefault = stripos($filemappings[$i], $this->config['default_string']);
-                    if($isdefault===false) {
-                      $path = $this->updatePath(trim($filemappings[$i]));
-                    } else {
-                      $path = $this->updatePath(trim(substr($filemappings[$i], strlen($this->config['default_string']))));
-                      $this->default = $path;
-                    }
-                    if(!array_key_exists($path, $mappingsht)) {
-                        $mappingsht[$path] = array(
-                            'default' => false,
-                            'source' => array('computername')
-                        );
-                    } else {
-                        //echo "skipped " . $path;
+                    $explodeline = explode("\\", $filemappings[$i]);
+                    if(count($explodeline) == 4) {
+                        $isdefault = stripos($filemappings[$i], $this->config['default_string']);
+                        $path = $this->updatePath(trim($explodeline[3]));
+                        if($isdefault!==false) {
+                            $this->default = $path;
+                        }
+                        if(!array_key_exists($path, $mappingsht)) {
+                            $mappingsht[$path] = array(
+                                'default' => false,
+                                'source' => array('computername')
+                            );
+                        } else {
+                            //echo "skipped " . $path;
+                        }
                     }
                     #echo $filemappings[$i];
                 }
@@ -94,22 +95,23 @@ class Broker {
             if (file_exists($this->config['mount_dir'] . "/" . $this->config['user_dir'] . "/" . $user . ".txt")) {
                 $filemappings = file($this->config['mount_dir'] . "/" . $this->config['user_dir'] . "/" . $user. ".txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
                 for($i = 0; $i < count($filemappings); $i++) {
-                    $isdefault = stripos($filemappings[$i], $this->config['default_string']);
-                    if($isdefault===false) {
-                      $path = $this->updatePath(trim($filemappings[$i]));
-                    } else {
-                      $path = $this->updatePath(trim(substr($filemappings[$i], strlen($this->config['default_string']))));
-                      $this->default = $path;
-                    }
-                    if(!array_key_exists($path, $mappingsht)) {
-                        $mappingsht[$path] = array(
-                            'default' => false,
-                            'source' => array('username')
-                        );
-                    } else {
-                        //echo "skipped " . $path;
-                        if(!in_array('username', $mappingsht[$path]['source'])) {
-                            array_push($mappingsht[$path]['source'], 'username');
+                    $explodeline = explode("\\", $filemappings[$i]);
+                    if(count($explodeline) == 4) {
+                        $isdefault = stripos($filemappings[$i], $this->config['default_string']);
+                        $path = $this->updatePath(trim($explodeline[3]));
+                        if($isdefault!==false) {
+                            $this->default = $path;
+                        }
+                        if(!array_key_exists($path, $mappingsht)) {
+                            $mappingsht[$path] = array(
+                                'default' => false,
+                                'source' => array('username')
+                            );
+                        } else {
+                            //echo "skipped " . $path;
+                            if(!in_array('username', $mappingsht[$path]['source'])) {
+                                array_push($mappingsht[$path]['source'], 'username');
+                            }
                         }
                     }
                     #echo $filemappings[$i];
