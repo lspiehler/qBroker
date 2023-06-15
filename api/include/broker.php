@@ -9,6 +9,7 @@ class Broker {
     private $httpbody;
     private $default;
     private $servers;
+    private $ttl;
     private $lbserver;
     private $format;
     private $balancer;
@@ -42,12 +43,14 @@ class Broker {
             return $this->returnErrorResponse(503, $servers["error"]);
         }
         $this->servers = $servers["servers"];
+        $this->ttl = $servers["ttl"];
         $this->httpresponse['body']['result'] = 'success';
         $this->httpresponse['body']['message'] = null;
         $this->httpresponse['body']['monitor_interval'] = $this->config['monitor_interval'];
         $this->httpresponse['body']['kill_active_monitors'] = $this->config['kill_active_monitors'];
         $this->httpresponse['body']['active_server_count'] = count($this->servers);
         $this->httpresponse['body']['active_servers']['server'] = $this->servers;
+        $this->httpresponse['body']['active_servers']['ttl'] = $this->ttl;
         $this->httpresponse['status'] = 200;
         $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
         return $this->httpresponse;
@@ -65,6 +68,7 @@ class Broker {
             return $this->returnErrorResponse(503, $servers["error"]);
         }
         $this->servers = $servers["servers"];
+        $this->ttl = $servers["ttl"];
         $lbserver = $this->balancer->getBrokeredServer();
         if($lbserver["error"] !== FALSE) {
             return $this->returnErrorResponse(503, $lbserver["error"]);
@@ -128,6 +132,7 @@ class Broker {
                 $this->httpresponse['body']['monitor'] = false;
                 //$this->httpresponse['body']['print_mappings']['mapping'] = $mappings;
                 $this->httpresponse['body']['active_servers']['server'] = $this->servers;
+                $this->httpresponse['body']['active_servers']['ttl'] = $this->ttl;
                 $this->httpresponse['body']['print_mapping_count'] = 0;
                 $this->httpresponse['body']['active_server_count'] = count($this->servers);
                 $this->httpresponse['status'] = 200;
@@ -159,6 +164,7 @@ class Broker {
                 $this->httpresponse['body']['active_server_count'] = count($this->servers);
                 $this->httpresponse['body']['print_mappings']['mapping'] = $mappings;
                 $this->httpresponse['body']['active_servers']['server'] = $this->servers;
+                $this->httpresponse['body']['active_servers']['ttl'] = $this->ttl;
                 $this->httpresponse['status'] = 200;
                 $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
             }

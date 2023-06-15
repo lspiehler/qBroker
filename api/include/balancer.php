@@ -35,7 +35,7 @@ class Balancer {
             }
             return array(
                 'error' => false,
-                //'ttl' => $ttl,
+                'ttl' => $ttl,
                 'servers' => $this->servers
             );
         } else {
