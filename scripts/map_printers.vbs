@@ -911,7 +911,7 @@ End Function
 osname = getOSName
 If InStr(UCase(osname), "SERVER") < 1 Then
 	site = getADSite
-	If strInArray(site, Array("TOURO", "NOEH", "UMC", "")) Then
+	If strInArray(site, Array("TOURO", "NOEH", "UMC", "", "EPIC")) Then
 		If delay <> 0 Then
 			writeOutput("Delaying " & delay & " second(s) before starting...")
 			WScript.Sleep delaycalculated
