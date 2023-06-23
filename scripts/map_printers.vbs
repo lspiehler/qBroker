@@ -154,7 +154,8 @@ Function setDefaultPrinter(printer)
     		objPrinter.SetDefaultPrinter() 
 	Next
 	If Err Then
-		writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
+		writeOutput(Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,""))
+		WshShell.LogEvent 4, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
 	End If
 	On Error GoTo 0
 	
@@ -228,6 +229,7 @@ Function mapMissingQueues(bqueues, equeues, dqueue)
 				WshNetwork.AddWindowsPrinterConnection path
 				If Err Then
 					writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
+					WshShell.LogEvent 4, Replace("Error: " & Err.Number & " " & Err.Description & "Failed to map " & path,vbLf,"")
 					writeOutput("Decreasing expected mapping count by 1 because the queue failed to map")
 					expectedmappingcount = expectedmappingcount - 1
 					'WScript.Echo "-2147023095"
@@ -368,16 +370,18 @@ Function removeDuplicateQueues(equeues)
 		If checkDuplicateQueue(i, queue, equeues) = True Then
 			writeOutput(path & " will be removed because duplicate detection found another queue mapped with the same name")
 			WshShell.LogEvent 4, path & " will be removed because duplicate detection found another queue mapped with the same name"
-			WSHNetwork.RemovePrinterConnection path, true, true
-			'equeues.RemoveAt(i)
-			'WScript.Echo Join(equeues, ",")
-			updatedarray = removeIndexFromArray(i, equeues)
-			ReDim equeues(UBound(updatedarray))
-			For j = 0 to UBound(updatedarray) Step 1
-				equeues(j) = updatedarray(j)
-			Next
-			Erase updatedarray
-			'WScript.Echo Join(equeues, ",")
+			If takeaction = True Then
+				WSHNetwork.RemovePrinterConnection path, true, true
+				'equeues.RemoveAt(i)
+				'WScript.Echo Join(equeues, ",")
+				updatedarray = removeIndexFromArray(i, equeues)
+				ReDim equeues(UBound(updatedarray))
+				For j = 0 to UBound(updatedarray) Step 1
+					equeues(j) = updatedarray(j)
+				Next
+				Erase updatedarray
+				'WScript.Echo Join(equeues, ",")
+			End If
 		Else
 			i = i + 1
 			'WScript.Echo queue & " is not a duplicate"
@@ -634,7 +638,9 @@ Function mapQueues()
 						
 						'WScript.Echo dqueue
 						'if we have mappings
-						If UBound(mappings) > 0 Then
+						'WScript.Echo UBound(mappings)
+						'WScript.Echo Join(mappings, ",")
+						If UBound(mappings) >= 0 Then
 						
 							'get existing mappings
 							ep = getExistingPrinters
@@ -663,7 +669,8 @@ Function mapQueues()
 								Err.Clear
 								WshNetwork.SetDefaultPrinter dq
 								If Err Then
-									writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
+									writeOutput(Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,""))
+									WshShell.LogEvent 4, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
 								End If
 								On Error GoTo 0
 								setDefaultPrinter(dq)
@@ -854,18 +861,23 @@ Function killExisting
 	strComputer = "."
 	Set objWMIService = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2")
 	Set colProcess = objWMIService.ExecQuery ("Select * from Win32_Process WHERE (Name = 'wscript.exe' OR Name = 'cscript.exe') AND CommandLine LIKE '%" & scriptname & "%'")
-	'WScript.Echo colProcess.count
-	For Each objProcess in colProcess
-		'only delete the matching processes that aren't the currently running process
-		'WScript.Echo InStr(objProcess.CommandLine, "/id:" & scriptid)
-		If InStr(objProcess.CommandLine, "/id:" & scriptid) < 1 Then
-			If InStr(objProcess.CommandLine, "/user:" & scriptuser) >= 1 Then
-				writeOutput("A duplicate process was found. Killing it...")
-				objProcess.Terminate()
+	If colProcess.count > 5 Then
+		writeOutput(colProcess.count & " duplicate processes were found running. This should never happen. Terminating the process...")
+		WshShell.LogEvent 4, colProcess.count & " duplicate processes were found running. This should never happen. Terminating the process..."
+		WScript.Quit
+	Else
+		For Each objProcess in colProcess
+			'only delete the matching processes that aren't the currently running process
+			'WScript.Echo InStr(objProcess.CommandLine, "/id:" & scriptid)
+			If InStr(objProcess.CommandLine, "/id:" & scriptid) < 1 Then
+				If InStr(objProcess.CommandLine, "/user:" & scriptuser) >= 1 Then
+					writeOutput("A duplicate process was found. Killing it...")
+					objProcess.Terminate()
+				End If
+				'Exit Function
 			End If
-			'Exit Function
-		End If
-	Next
+		Next
+	End If
 	
 	Set objWMIService = Nothing
 	Set colProcess = Nothing
@@ -899,7 +911,7 @@ End Function
 osname = getOSName
 If InStr(UCase(osname), "SERVER") < 1 Then
 	site = getADSite
-	If strInArray(site, Array("TOURO", "NOEH", "UMC", "")) Then
+	If strInArray(site, Array("TOURO", "NOEH", "UMC", "", "EPIC")) Then
 		If delay <> 0 Then
 			writeOutput("Delaying " & delay & " second(s) before starting...")
 			WScript.Sleep delaycalculated
