@@ -21,7 +21,7 @@
           spec: spec,
           dom_id: '#swagger-ui',
           deepLinking: true,
-          docExpansion: 'full',
+          //docExpansion: 'full',
           presets: [
             SwaggerUIBundle.presets.apis,
             SwaggerUIStandalonePreset

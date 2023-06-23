@@ -22,12 +22,22 @@ class HTTPResponse {
                 'active_server_count' => 0,
                 'print_mappings' => array(
                     'mapping' => array()
-                ),*/
+                ),
                 'active_servers' => array(
                     'server' => array()
-                )
+                )*/
             )
         );
+    }
+
+    public function sendHTTPResponse($response) {
+        foreach($response['headers'] as $key => $value) {
+            header($key . ": " . $value);
+        }
+        
+        http_response_code($response['status']);
+        //http_response_code(400);
+        echo $response['body'];
     }
 
     public function formatHttpResponse(array $response, string $format): array {

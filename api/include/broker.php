@@ -33,7 +33,7 @@ class Broker {
         $this->httpresponse['body']['result'] = 'error';
         $this->httpresponse['body']['message'] = $message;
         $this->httpresponse['status'] = $httpcode;
-        $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
+        //$this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
         return $this->httpresponse;
     }
 
@@ -49,10 +49,11 @@ class Broker {
         $this->httpresponse['body']['monitor_interval'] = $this->config['monitor_interval'];
         $this->httpresponse['body']['kill_active_monitors'] = $this->config['kill_active_monitors'];
         $this->httpresponse['body']['active_server_count'] = count($this->servers);
+        $this->httpresponse['body']['active_servers'] = array();
         $this->httpresponse['body']['active_servers']['server'] = $this->servers;
         $this->httpresponse['body']['active_servers']['ttl'] = $this->ttl;
         $this->httpresponse['status'] = 200;
-        $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
+        //$this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
         return $this->httpresponse;
     }
 
@@ -74,55 +75,59 @@ class Broker {
             return $this->returnErrorResponse(503, $lbserver["error"]);
         }
         $this->lbserver = $lbserver["server"];
-        $computer = strtoupper($computer);
-        $user = strtoupper($user);
         if (file_exists($this->config['mount_dir'] . "/" . $this->config['computer_dir'])) {
             $mappingsht = array();
-            if (file_exists($this->config['mount_dir'] . "/" . $this->config['computer_dir'] . "/" . $computer . ".txt")) {
-                $filemappings = file($this->config['mount_dir'] . "/" . $this->config['computer_dir'] . "/" . $computer. ".txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                for($i = 0; $i < count($filemappings); $i++) {
-                    $explodeline = explode("\\", $filemappings[$i]);
-                    if(count($explodeline) == 4) {
-                        $isdefault = stripos($filemappings[$i], $this->config['default_string']);
-                        $path = $this->updatePath(trim($explodeline[3]));
-                        if($isdefault!==false) {
-                            $this->default = $path;
-                        }
-                        if(!array_key_exists($path, $mappingsht)) {
-                            $mappingsht[$path] = array(
-                                'default' => false,
-                                'source' => array('computername')
-                            );
-                        } else {
-                            //echo "skipped " . $path;
-                        }
-                    }
-                    #echo $filemappings[$i];
-                }
-            }
-            if (file_exists($this->config['mount_dir'] . "/" . $this->config['user_dir'] . "/" . $user . ".txt")) {
-                $filemappings = file($this->config['mount_dir'] . "/" . $this->config['user_dir'] . "/" . $user. ".txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                for($i = 0; $i < count($filemappings); $i++) {
-                    $explodeline = explode("\\", $filemappings[$i]);
-                    if(count($explodeline) == 4) {
-                        $isdefault = stripos($filemappings[$i], $this->config['default_string']);
-                        $path = $this->updatePath(trim($explodeline[3]));
-                        if($isdefault!==false) {
-                            $this->default = $path;
-                        }
-                        if(!array_key_exists($path, $mappingsht)) {
-                            $mappingsht[$path] = array(
-                                'default' => false,
-                                'source' => array('username')
-                            );
-                        } else {
-                            //echo "skipped " . $path;
-                            if(!in_array('username', $mappingsht[$path]['source'])) {
-                                array_push($mappingsht[$path]['source'], 'username');
+            if($computer !== FALSE) {
+                $computer = strtoupper($computer);
+                if (file_exists($this->config['mount_dir'] . "/" . $this->config['computer_dir'] . "/" . $computer . ".txt")) {
+                    $filemappings = file($this->config['mount_dir'] . "/" . $this->config['computer_dir'] . "/" . $computer. ".txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                    for($i = 0; $i < count($filemappings); $i++) {
+                        $explodeline = explode("\\", $filemappings[$i]);
+                        if(count($explodeline) == 4) {
+                            $isdefault = stripos($filemappings[$i], $this->config['default_string']);
+                            $path = $this->updatePath(trim($explodeline[3]));
+                            if($isdefault!==false) {
+                                $this->default = $path;
+                            }
+                            if(!array_key_exists($path, $mappingsht)) {
+                                $mappingsht[$path] = array(
+                                    'default' => false,
+                                    'source' => array('computername')
+                                );
+                            } else {
+                                //echo "skipped " . $path;
                             }
                         }
+                        #echo $filemappings[$i];
                     }
-                    #echo $filemappings[$i];
+                }
+            }
+            if($user !== FALSE) {
+                $user = strtoupper($user);
+                if (file_exists($this->config['mount_dir'] . "/" . $this->config['user_dir'] . "/" . $user . ".txt")) {
+                    $filemappings = file($this->config['mount_dir'] . "/" . $this->config['user_dir'] . "/" . $user. ".txt", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                    for($i = 0; $i < count($filemappings); $i++) {
+                        $explodeline = explode("\\", $filemappings[$i]);
+                        if(count($explodeline) == 4) {
+                            $isdefault = stripos($filemappings[$i], $this->config['default_string']);
+                            $path = $this->updatePath(trim($explodeline[3]));
+                            if($isdefault!==false) {
+                                $this->default = $path;
+                            }
+                            if(!array_key_exists($path, $mappingsht)) {
+                                $mappingsht[$path] = array(
+                                    'default' => false,
+                                    'source' => array('username')
+                                );
+                            } else {
+                                //echo "skipped " . $path;
+                                if(!in_array('username', $mappingsht[$path]['source'])) {
+                                    array_push($mappingsht[$path]['source'], 'username');
+                                }
+                            }
+                        }
+                        #echo $filemappings[$i];
+                    }
                 }
             }
             if(count($mappingsht) < 1) {
@@ -131,12 +136,13 @@ class Broker {
                 //$this->httpresponse['body']['monitor_interval'] = $this->config['monitor_interval'];
                 $this->httpresponse['body']['monitor'] = false;
                 //$this->httpresponse['body']['print_mappings']['mapping'] = $mappings;
+                $this->httpresponse['body']['active_servers'] = array();
                 $this->httpresponse['body']['active_servers']['server'] = $this->servers;
                 $this->httpresponse['body']['active_servers']['ttl'] = $this->ttl;
                 $this->httpresponse['body']['print_mapping_count'] = 0;
                 $this->httpresponse['body']['active_server_count'] = count($this->servers);
                 $this->httpresponse['status'] = 200;
-                $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
+                //$this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
             } else {
                 $mappingsht[$this->default]['default'] = true;
                 $mappings = array();
@@ -163,10 +169,11 @@ class Broker {
                 $this->httpresponse['body']['print_mapping_count'] = count($mappings);
                 $this->httpresponse['body']['active_server_count'] = count($this->servers);
                 $this->httpresponse['body']['print_mappings']['mapping'] = $mappings;
+                $this->httpresponse['body']['active_servers'] = array();
                 $this->httpresponse['body']['active_servers']['server'] = $this->servers;
                 $this->httpresponse['body']['active_servers']['ttl'] = $this->ttl;
                 $this->httpresponse['status'] = 200;
-                $this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
+                //$this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
             }
             return $this->httpresponse;
         } else {
