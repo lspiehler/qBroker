@@ -19,14 +19,45 @@ if(array_key_exists('query', $request['uri'])) {
 }
 
 $route = "";
+$nextroute = "";
 
 if(count($request['path']) >= 2) {
     $route = $request['path'][1];
 }
 
-switch($route) {
-    case 'mappings':
-        include('./routes/mappings.php');
+if(count($request['path']) >= 3) {
+    $nextroute = $request['path'][2];
+}
+
+$format = 'json';
+$headers = getallheaders();
+if(array_key_exists('accept', $headers)) {
+  if(strpos($headers['accept'], "application/xml") !== FALSE) {
+    $format = "xml";
+  }
+}
+if(array_key_exists('Accept', $headers)) {
+  if(strpos($headers['Accept'], "application/xml") !== FALSE) {
+    $format = "xml";
+  }
+}
+
+function notFound($request) {
+    http_response_code(404);
+    print_r(getallheaders());
+    print_r($request);
+}
+
+switch($route != 'handler' && is_file('./routes/' . $route . '.php')) {
+    case true:
+        include('./routes/handler.php');
+        break;
+    /*case 'status':
+        if (file_exists('./routes/status/'. $request['path'][2] .'.php')) {
+            include('./routes/status/'. $request['path'][2] .'.php');
+        } else {
+            notFound($request);
+        }
         break;
     case 'activeservers':
         include('./routes/activeservers.php');
@@ -34,28 +65,43 @@ switch($route) {
     case 'check':
         include('./routes/check.php');
         break;
-    case 'dns':
-        $records = dns_get_record("_qbroker._tcp.lcmchealth.org", DNS_SRV);
-        print_r($records);
-        break;
-        /*$json = file_get_contents('../config.js');
-        $config = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-        require './include/balancer.php';
-        $balancer = new Balancer($config);
-        print_r($balancer->getServers());*/
-        break;
     case "":
         http_response_code(200);
         include('./views/swagger.php');
-        break;
+        break;*/
     default:
-        if(file_exists('./views/' . $route)) {
-            http_response_code(200);
-            include('./views/' . $route);
-        } else {
-            http_response_code(404);
-            print_r(getallheaders());
-            print_r($request);
+        //echo $route;
+        //echo $route;
+        switch($route != "" && $nextroute != "handler" && is_dir('./routes/' . $route)) {
+            case true:
+                //include('./routes/'. $route .'.php');
+                //break;
+                include('./routes/' . $route . '/handler.php');
+                break;
+            default:
+                switch($route) {
+                    case 'dns':
+                        $records = dns_get_record("_qbroker._tcp.lcmchealth.org", DNS_SRV);
+                        print_r($records);
+                        break;
+                        /*$json = file_get_contents('../config.js');
+                        $config = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+                        require './include/balancer.php';
+                        $balancer = new Balancer($config);
+                        print_r($balancer->getServers());*/
+                        #break;
+                    case "":
+                        http_response_code(200);
+                        include('./views/swagger.php');
+                        break;
+                    default:
+                        if(file_exists('./views/' . $route)) {
+                            http_response_code(200);
+                            include('./views/' . $route);
+                        } else {
+                            notFound($request);
+                        }
+                }
         }
 }
 

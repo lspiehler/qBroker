@@ -1,1 +1,5 @@
-hello
+<?php
+
+header('Location: /api/');
+
+?>
