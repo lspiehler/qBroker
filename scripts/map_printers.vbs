@@ -821,10 +821,10 @@ Function serverMonitor
 	monitor_interval = true
 
 	Do While true
-		If workstationLocked Then
-			writeOutput("Workstation is locked. Skipping server status check for " & locked_workstation_interval / 1000 & " seconds")
-			WScript.Sleep Clng(locked_workstation_interval)
-		Else
+		'If workstationLocked Then
+		'	writeOutput("Workstation is locked. Skipping server status check for " & locked_workstation_interval / 1000 & " seconds")
+		'	WScript.Sleep Clng(locked_workstation_interval)
+		'Else
 			monitor_interval = checkServers
 			If monitor_interval = false Then
 				writeOutput("kill_active_monitors is set to true, the script will now terminate")
@@ -833,7 +833,7 @@ Function serverMonitor
 				writeOutput("Monitoring is enabled, checking active servers in " & monitor_interval / 1000 & " seconds")
 				WScript.Sleep Clng(monitor_interval)
 			End If
-		End If
+		'End If
 	Loop
 End Function
 
