@@ -40,7 +40,7 @@ if(count($request['path']) < 3) {
     if ($mysqli) {
       $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 3);
       $mysqli->options(MYSQLI_OPT_READ_TIMEOUT, 3);
-      $mysqli->real_connect($config["db_rw_host"], $config["db_user"], $config["db_pass"], $config["db_name"]);
+      @$mysqli->real_connect($config["db_rw_host"], $config["db_user"], $config["db_pass"], $config["db_name"]);
 
       if (!$mysqli->connect_error) {
         $sql1 = "DELETE FROM `mapping_history` WHERE `computername` = ? AND `username` = ?";
