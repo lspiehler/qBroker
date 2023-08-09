@@ -1,9 +1,30 @@
 Option Explicit
 'On Error Resume Next
 
-Dim NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount
+Dim disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount
 
 Set NamedArgs = WScript.Arguments.Named
+disableserveros = False
+disablevdi = False
+
+If NamedArgs.Exists("qbrokerserver") Then
+	qbrokerserver = NamedArgs.Item("qbrokerserver")
+Else
+	writeOutput("Terminating because no qbrokerserver was provided")
+	WScript.Quit
+End If
+
+If NamedArgs.Exists("disableserveros") Then
+	If UCase(NamedArgs.Item("disableserveros")) = "TRUE" Then
+		disableserveros = True
+	End If
+End If
+
+If NamedArgs.Exists("disablevdi") Then
+	If UCase(NamedArgs.Item("disablevdi")) = "TRUE" Then
+		disablevdi = True
+	End If
+End If
 
 'For Each Arg In NamedArgs
 '	WScript.Echo Arg & " = " & NamedArgs.Item(Arg)
@@ -38,9 +59,9 @@ Else
 		strArgs = strArgs & " /" & Arg & ":" & NamedArgs.Item(Arg)
 	Next
 	If strEngine = "CSCRIPT.EXE" Then
-		strCmd = "CSCRIPT.EXE //NoLogo """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay)
+		strCmd = "CSCRIPT.EXE //NoLogo """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay) & " /qbrokerserver:" & qbrokerserver & " /disableserveros:" & CStr(disableserveros) & " /disablevdi:" & CStr(disablevdi)
 	Else
-		strCmd = "WSCRIPT.EXE """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay)
+		strCmd = "WSCRIPT.EXE """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay) & " /qbrokerserver:" & qbrokerserver & " /disableserveros:" & CStr(disableserveros) & " /disablevdi:" & CStr(disablevdi)
 	End If
 	wshShell.Run strCmd
 	'WScript.Echo strCmd
@@ -129,7 +150,10 @@ Function getCitrixHostname()
 		getCitrixHostname = getEnvVariable("COMPUTERNAME", true)
 
 	Else
-
+		If disablevdi = True Then
+			writeOutput("Terminating because disablevdi is true and this is a VDI desktop")
+			WScript.Quit
+		End If
 		getCitrixHostname = UCase(dwValue)
 
 	End If
@@ -519,7 +543,7 @@ Function mapQueues()
 		ReDim mappings(-1)
 		ReDim activeservers(-1)
 	
-		url = "https://printermappings.lcmchealth.org/api/mappings/" & computername & "/" & username
+		url = "https://" & qbrokerserver & "/api/mappings/" & computername & "/" & username
 	
 		xml = httpRequest(url)
 
@@ -674,15 +698,23 @@ Function mapQueues()
 								End If
 								On Error GoTo 0
 								setDefaultPrinter(dq)
+								
+								WScript.Sleep 10000
+								On Error Resume Next
+								Err.Clear
+								WshNetwork.SetDefaultPrinter dq
+								If Err Then
+									writeOutput(Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,""))
+									WshShell.LogEvent 4, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
+								End If
+								On Error GoTo 0
+								setDefaultPrinter(dq)
 							End If
 							
 							Erase ep
 							Erase rq
 							Set WshNetwork = Nothing
-							
-							'WScript.Sleep 30000
-							'WshNetwork.SetDefaultPrinter dq
-							'setDefaultPrinter(dq)
+
 						End If
 					End If
 				End If
@@ -735,7 +767,7 @@ Function checkServers
 	ReDim activeservers(-1)
 	
 	monitor_interval = failure_monitor_interval
-	xml = httpRequest("https://printermappings.lcmchealth.org/api/activeservers")
+	xml = httpRequest("https://" & qbrokerserver & "/api/activeservers")
 	If xml = false Then
 		writeOutput("http request failure")
 	Else
@@ -909,7 +941,9 @@ Function workstationLocked()
 End Function
 
 osname = getOSName
-If InStr(UCase(osname), "SERVER") < 1 Then
+If InStr(UCase(osname), "SERVER") >= 1 and disableserveros = True Then
+	writeOutput("Terminating because OS ("& osname &") is a server.")
+Else
 	site = getADSite
 	If strInArray(site, Array("TOURO", "NOEH", "UMC", "", "EPIC")) Then
 		If delay <> 0 Then
@@ -932,6 +966,4 @@ If InStr(UCase(osname), "SERVER") < 1 Then
 	Else
 		writeOutput("Terminating because site " & site & " was not found in the enabled site list")
 	End If
-Else
-	writeOutput("Terminating because OS ("& osname &") is a server.")
 End If
