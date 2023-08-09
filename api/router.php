@@ -7,6 +7,22 @@ error_reporting(E_ALL);
 //default to http 500 in case only errors are shown, if successful, http code will be updated
 http_response_code(500);
 
+function getUserIpAddr()
+{
+  if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+    //ip from share internet
+    $ip = $_SERVER['HTTP_CLIENT_IP'];
+  } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    //ip pass from proxy
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+  } else {
+    $ip = $_SERVER['REMOTE_ADDR'];
+  }
+  return $ip;
+}
+
+$clientip = getUserIpAddr();
+
 $request = array();
 
 $request['method'] = $_SERVER['REQUEST_METHOD'];
