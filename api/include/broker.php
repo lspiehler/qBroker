@@ -144,7 +144,9 @@ class Broker {
                 $this->httpresponse['status'] = 200;
                 //$this->httpresponse = $this->hrc->formatHttpResponse($this->httpresponse, $this->format);
             } else {
-                $mappingsht[$this->default]['default'] = true;
+                if($this->default) {
+                    $mappingsht[$this->default]['default'] = true;
+                }
                 $mappings = array();
                 foreach($mappingsht as $key => $value) {
                     $default = false;
