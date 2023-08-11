@@ -1,28 +1,27 @@
 Option Explicit
 'On Error Resume Next
 
-Dim disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount
+Dim disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount, computername
 
 Set NamedArgs = WScript.Arguments.Named
-disableserveros = False
-disablevdi = False
+disableserveros = True
+disablevdi = True
 
 If NamedArgs.Exists("qbrokerserver") Then
 	qbrokerserver = NamedArgs.Item("qbrokerserver")
 Else
-	writeOutput("Terminating because no qbrokerserver was provided")
-	WScript.Quit
+	qbrokerserver = "qbroker.lcmchealth.org"
 End If
 
 If NamedArgs.Exists("disableserveros") Then
-	If UCase(NamedArgs.Item("disableserveros")) = "TRUE" Then
-		disableserveros = True
+	If UCase(NamedArgs.Item("disableserveros")) = "FALSE" Then
+		disableserveros = False
 	End If
 End If
 
 If NamedArgs.Exists("disablevdi") Then
-	If UCase(NamedArgs.Item("disablevdi")) = "TRUE" Then
-		disablevdi = True
+	If UCase(NamedArgs.Item("disablevdi")) = "FALSE" Then
+		disablevdi = False
 	End If
 End If
 
@@ -444,6 +443,7 @@ Function removeBadQueues(onlineservers, bqueues, equeues)
 				writeOutput(server & " is still online for " & queue)
 			Else
 				writeOutput(server & " was not found in the online server list for " & path)
+				WshShell.LogEvent 4, path & " will be removed because " & server & " was not found in the online server list"
 				delete = True
 			End If
 		End If
@@ -520,6 +520,7 @@ Function checkMappedQueues(onlineservers, equeues)
 			path = "\\" & server & "\" & queue
 			writeOutput(server & " was not found in the online server list for " & path)
 			writeOutput("Requesting queues to be remapped because at least one was found on an inactive server")
+			WshShell.LogEvent 4, server & " was not found in the online server list for " & path & ". Requesting queues to be remapped because at least one was found on an inactive server."
 			checkMappedQueues = true
 			Exit Function
 		End If
@@ -528,14 +529,13 @@ Function checkMappedQueues(onlineservers, equeues)
 	checkMappedQueues = false
 End Function
 
-Function mapQueues()
-	Dim username, computername, success
+Function mapQueues(computername)
+	Dim username, success
 	
 	success = false
 	monitor_interval = false
 	
 	username = getEnvVariable("USERNAME", true)
-	computername = getCitrixHostname
 	
 	while success = false
 		Dim url, xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rbq, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval, i
@@ -837,7 +837,7 @@ Function checkServers
 				If remap = false Then
 					writeOutput("Mapped queues are all on active servers")
 				Else
-					mapQueues
+					mapQueues(computername)
 				End If	
 			End If
 		End If
@@ -941,17 +941,18 @@ Function workstationLocked()
 End Function
 
 osname = getOSName
+computername = getCitrixHostname
 If InStr(UCase(osname), "SERVER") >= 1 and disableserveros = True Then
 	writeOutput("Terminating because OS ("& osname &") is a server.")
 Else
-	site = getADSite
-	If strInArray(site, Array("TOURO", "NOEH", "UMC", "", "EPIC")) Then
+	'site = getADSite
+	'If strInArray(site, Array("TOURO", "NOEH", "UMC", "", "EPIC")) Then
 		If delay <> 0 Then
 			writeOutput("Delaying " & delay & " second(s) before starting...")
 			WScript.Sleep delaycalculated
 		End If
 		killExisting
-		monitor_interval = mapQueues
+		monitor_interval = mapQueues(computername)
 		If monitor_interval = false Then
 			writeOutput("Active server monitoring is disabled, the script will terminate now")
 		Else
@@ -963,7 +964,7 @@ Else
 			'	writeOutput("The script will terminate now because another copy of the process is already running")
 			'End If
 		End If
-	Else
-		writeOutput("Terminating because site " & site & " was not found in the enabled site list")
-	End If
+	'Else
+	'	writeOutput("Terminating because site " & site & " was not found in the enabled site list")
+	'End If
 End If
