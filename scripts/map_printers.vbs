@@ -680,41 +680,46 @@ Function mapQueues(computername)
 							
 							dq = mapMissingQueues(mappings, rq, dqueue)
 							
-							writeOutput("Setting default printer to " & dq)						
-							'For Each mapping In mappings
-								'WScript.Echo "\\" & mapping.Item("server") & "\" & mapping.Item("queue") & "\" & mapping.Item("default")
-							'Next
-							
-							Set WshNetwork = WScript.CreateObject("WScript.Network")
-							
-							WScript.Sleep 3000
-							If takeaction = True Then
-								On Error Resume Next
-								Err.Clear
-								WshNetwork.SetDefaultPrinter dq
-								If Err Then
-									writeOutput(Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,""))
-									WshShell.LogEvent 4, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
-								End If
-								On Error GoTo 0
-								setDefaultPrinter(dq)
-								
-								WScript.Sleep 10000
-								On Error Resume Next
-								Err.Clear
-								WshNetwork.SetDefaultPrinter dq
-								If Err Then
-									writeOutput(Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,""))
-									WshShell.LogEvent 4, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
-								End If
-								On Error GoTo 0
-								setDefaultPrinter(dq)
-							End If
-							
 							Erase ep
 							Erase rq
-							Set WshNetwork = Nothing
-
+							
+							If IsEmpty(dq) Then
+								writeOutput("No default printer was specified")
+								WshShell.LogEvent 4, "No default printer was specified."
+							Else
+								writeOutput("Setting default printer to " & dq)						
+								'For Each mapping In mappings
+									'WScript.Echo "\\" & mapping.Item("server") & "\" & mapping.Item("queue") & "\" & mapping.Item("default")
+								'Next
+								
+								Set WshNetwork = WScript.CreateObject("WScript.Network")
+								
+								WScript.Sleep 3000
+								If takeaction = True Then
+									On Error Resume Next
+									Err.Clear
+									WshNetwork.SetDefaultPrinter dq
+									If Err Then
+										writeOutput(Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,""))
+										WshShell.LogEvent 4, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
+									End If
+									On Error GoTo 0
+									setDefaultPrinter(dq)
+									
+									WScript.Sleep 10000
+									On Error Resume Next
+									Err.Clear
+									WshNetwork.SetDefaultPrinter dq
+									If Err Then
+										writeOutput(Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,""))
+										WshShell.LogEvent 4, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
+									End If
+									On Error GoTo 0
+									setDefaultPrinter(dq)
+								End If
+								
+								Set WshNetwork = Nothing
+							End If
 						End If
 					End If
 				End If
