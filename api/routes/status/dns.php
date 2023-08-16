@@ -8,7 +8,7 @@ if($lookup["error"] === FALSE) {
     $response['status'] = 200;
     $response['body']['result'] = 'success';
     $response['body']['data'] = $lookup;
-    $response['body']['message'] = null;
+    $response['body']['message'] = "DNS resolution is operational";
 } else {
     $response['status'] = 500;
     $response['body']['result'] = 'error';
