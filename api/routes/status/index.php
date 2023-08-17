@@ -55,20 +55,27 @@
                                     'Content-Type': 'application/json'
                                 }
                             }
-                            httpRequest({options: options}, function(err, resp) {
+                            httpRequest({options: options}, function(err, status) {
                                 if(err) {
                                     //alert(err);
                                     //console.log(err);
                                     checkcells[i].style.color = "red";
                                     checkcells[i].innerText = "" . err;
                                 } else {
-                                    //console.log(resp);
-                                    if(resp.statusCode == 200 && resp.body.result == "success") {
+                                    if(status.statusCode == 200 && status.body.result == "success") {
                                         checkcells[i].style.color = "green";
+                                        if(resp.body.data.checks[i] == 'config') {
+                                            let config = document.getElementById('config');
+                                            config.innerText = "Config:\r\n\r\n" + JSON.stringify(status.body.data, null, 2);
+                                        }
+                                        if(resp.body.data.checks[i] == 'dns') {
+                                            let dns = document.getElementById('dns');
+                                            dns.innerText = "Active Servers:\r\n\r\n" + JSON.stringify(status.body.data, null, 2);
+                                        }
                                     } else {
                                         checkcells[i].style.color = "red";
                                     }
-                                    checkcells[i].innerText = resp.body.message || resp.body.data;
+                                    checkcells[i].innerText = status.body.message || status.body.data;
                                 }
                             });
                         }
@@ -82,5 +89,7 @@
 
         </table>
         <pre id="diskusage"></pre>
+        <pre id="dns"></pre>
+        <pre id="config"></pre>
     </body>
 </html>
