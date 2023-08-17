@@ -7,7 +7,7 @@ $response['body']['result'] = 'error';
 $response['status'] = 500;
 $response['body']['data'] = null;
 
-$url = 'https://'.$_SERVER['HTTP_HOST'].'/self-service';
+$url = 'https://'.$config['fqdn'].'/self-service';
 
 $curl = curl_init($url);
 curl_setopt($curl, CURLOPT_URL, $url);
