@@ -5,6 +5,26 @@
         <script src="/include/js/common.js"></script>
         <script>
             window.onload = function() {
+                let duoptions = {
+                    path: '/api/status/disk-usage',
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+                httpRequest({options: duoptions}, function(err, resp) {
+                    if(err) {
+                        alert(err);
+                    } else {
+                        let du = document.getElementById('diskusage');
+                        if(resp.statusCode == 200 && resp.body.result == "success") {
+                            du.innerText = "Disk Usage:\r\n\r\n" + resp.body.message;
+                        } else {
+                            du.innerText = resp.body.message;
+                        }
+                    }
+                });
+
                 let options = {
                     path: '/api/status/list',
                     method: 'GET',
@@ -61,5 +81,6 @@
         <table border=1 id="checktable">
 
         </table>
+        <pre id="diskusage"></pre>
     </body>
 </html>

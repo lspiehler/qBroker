@@ -7,7 +7,8 @@ $ignore = array(
     "list.php",
     "php.php",
     "index.php",
-    "request.php"
+    "request.php",
+    "disk-usage.php"
 );
 
 try {
