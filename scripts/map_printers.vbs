@@ -45,7 +45,7 @@ locked_workstation_interval = 60000
 If NamedArgs.Exists("delay") Then
 	delay = CInt(NamedArgs.Item("delay"))
 Else
-	delay = 0
+	delay = 10
 End If
 
 delaycalculated = delay * 1000
