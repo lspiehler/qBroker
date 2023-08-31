@@ -485,6 +485,7 @@ Function httpRequest(url)
 	Err.Clear
 	restReq.open "GET", url, false
 	restReq.setRequestHeader "Accept", "application/xml"
+	restReq.setRequestHeader "Connection", "close"
 	restReq.send
 	If Err Then
 		writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
