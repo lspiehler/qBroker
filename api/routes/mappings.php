@@ -76,7 +76,7 @@ if(count($request['path']) < 3) {
                 //don't show any errors
               }
 
-              $sql3 = "INSERT INTO `request_count` (`computername`, `username`, `count`) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE `count` = `count` + 1";
+              $sql3 = "INSERT INTO `request_count` (`computername`, `username`, `count`, `last_request`) VALUES (?, ?, 1, NOW()) ON DUPLICATE KEY UPDATE `count` = `count` + 1, `last_request` = NOW()";
 
               $stmt3 = $mysqli->prepare($sql3);
 

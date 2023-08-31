@@ -70,7 +70,7 @@
                                         }
                                         if(resp.body.data.checks[i] == 'dns') {
                                             let dns = document.getElementById('dns');
-                                            dns.innerText = "Active Servers:\r\n\r\n" + JSON.stringify(status.body.data, null, 2);
+                                            dns.innerText = "DNS SRV Records:\r\n\r\n" + JSON.stringify(status.body.data, null, 2);
                                         }
                                     } else {
                                         checkcells[i].style.color = "red";
