@@ -479,13 +479,19 @@ End Function
 
 Function httpRequest(url)
 	Dim restReq, response, status
-	Set restReq = CreateObject("Microsoft.XMLHTTP")
+	'Set restReq = CreateObject("Microsoft.XMLHTTP")
+	'Set restReq = CreateObject("Msxml2.XMLHTTP")
+	'Set restReq = CreateObject("Msxml2.XMLHTTP.6.0")
+	Set restReq = CreateObject("MSXML2.ServerXMLHTTP")
+	'Set restReq = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+	'Set restReq = CreateObject("WinHttp.WinHttpRequest.5.1")
 
 	On Error Resume Next
 	Err.Clear
 	restReq.open "GET", url, false
 	restReq.setRequestHeader "Accept", "application/xml"
 	restReq.setRequestHeader "Connection", "close"
+	restReq.setRequestHeader "qBroker-Script-Version", "1.1"
 	restReq.send
 	If Err Then
 		writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
