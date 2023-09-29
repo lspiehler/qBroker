@@ -100,6 +100,12 @@ class Broker {
                         }
                         #echo $filemappings[$i];
                     }
+                } else {
+                    //make mappings
+                    require_once('mappinggenerator.php');
+                    $mg = new MappingGenerator($this->config);
+                    $result = $mg->generateMappings($computer, $lbserver["server"]);
+                    //$this->httpresponse['body']['newmappingfile'] = $result;
                 }
             }
             if($user !== FALSE) {
