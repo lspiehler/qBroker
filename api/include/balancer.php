@@ -14,12 +14,18 @@ class Balancer {
 
     public function getServers(): array {
         /*$this->servers = array(
-            'lcmc-prtsrv01',
-            'lcmc-prtsrv02',
-            'lcmc-prtsrv03'
+            'lcmc-prtsrv01.lcmchealth.org',
+            'lcmc-prtsrv02.lcmchealth.org',
+            'lcmc-prtsrv03.lcmchealth.org',
+            'lcmc-prtsrv04.lcmchealth.org',
+            //'lcmc-prtsrv05.lcmchealth.org',
+            'lcmc-prtsrv06.lcmchealth.org',
+            'lcmc-prtsrv07.lcmchealth.org',
+            'lcmc-prtsrv08.lcmchealth.org'
         );
         return array(
             'error' => false,
+            'ttl' => 0,
             'servers' => $this->servers
         );*/
         $lookup = $this->srvlookup->lookupServers();
