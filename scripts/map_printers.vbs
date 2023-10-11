@@ -1,11 +1,12 @@
 Option Explicit
 'On Error Resume Next
 
-Dim disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount, computername
+Dim forceremap, disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount, computername
 
 Set NamedArgs = WScript.Arguments.Named
 disableserveros = True
 disablevdi = True
+forceremap = True
 
 If NamedArgs.Exists("qbrokerserver") Then
 	qbrokerserver = NamedArgs.Item("qbrokerserver")
@@ -22,6 +23,12 @@ End If
 If NamedArgs.Exists("disablevdi") Then
 	If UCase(NamedArgs.Item("disablevdi")) = "FALSE" Then
 		disablevdi = False
+	End If
+End If
+
+If NamedArgs.Exists("forceremap") Then
+	If UCase(NamedArgs.Item("forceremap")) = "FALSE" Then
+		forceremap = False
 	End If
 End If
 
@@ -58,9 +65,9 @@ Else
 		strArgs = strArgs & " /" & Arg & ":" & NamedArgs.Item(Arg)
 	Next
 	If strEngine = "CSCRIPT.EXE" Then
-		strCmd = "CSCRIPT.EXE //NoLogo """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay) & " /qbrokerserver:" & qbrokerserver & " /disableserveros:" & CStr(disableserveros) & " /disablevdi:" & CStr(disablevdi)
+		strCmd = "CSCRIPT.EXE //NoLogo """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay) & " /qbrokerserver:" & qbrokerserver & " /disableserveros:" & CStr(disableserveros) & " /disablevdi:" & CStr(disablevdi) & " /forceremap:" & CStr(forceremap)
 	Else
-		strCmd = "WSCRIPT.EXE """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay) & " /qbrokerserver:" & qbrokerserver & " /disableserveros:" & CStr(disableserveros) & " /disablevdi:" & CStr(disablevdi)
+		strCmd = "WSCRIPT.EXE """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay) & " /qbrokerserver:" & qbrokerserver & " /disableserveros:" & CStr(disableserveros) & " /disablevdi:" & CStr(disablevdi) & " /forceremap:" & CStr(forceremap)
 	End If
 	wshShell.Run strCmd
 	'WScript.Echo strCmd
@@ -491,7 +498,7 @@ Function httpRequest(url)
 	restReq.open "GET", url, false
 	restReq.setRequestHeader "Accept", "application/xml"
 	restReq.setRequestHeader "Connection", "close"
-	restReq.setRequestHeader "qBroker-Script-Version", "1.1"
+	restReq.setRequestHeader "qBroker-Script-Version", "1.2"
 	restReq.send
 	If Err Then
 		writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
@@ -539,7 +546,7 @@ Function checkMappedQueues(onlineservers, equeues)
 	checkMappedQueues = false
 End Function
 
-Function mapQueues(computername)
+Function mapQueues(computername, firstrun)
 	Dim username, success
 	
 	success = false
@@ -622,6 +629,10 @@ Function mapQueues(computername)
 						WshShell.LogEvent 2, "No mappings were found using the supplied parameters in request to " & url
 						writeOutput("No mappings were found using the supplied parameters")
 					Else
+						If forceremap = True And firstrun = True Then
+							unMapAllQueues()
+							'WScript.Quit
+						End If
 						'WScript.Echo UBound(mappings)
 						Set print_mappings = Root.getElementsByTagName("print_mappings")
 						'WScript.Echo len(NodeList)
@@ -852,7 +863,7 @@ Function checkServers
 				If remap = false Then
 					writeOutput("Mapped queues are all on active servers")
 				Else
-					mapQueues(computername)
+					mapQueues computername, false
 				End If	
 			End If
 		End If
@@ -956,6 +967,23 @@ Function workstationLocked()
     workstationLocked = (logonScreenCount > 0)
 End Function
 
+Function unMapAllQueues()
+	Dim ep, queue, WshNetwork
+	
+	Set WshNetwork = WScript.CreateObject("WScript.Network")
+	
+	ep = getExistingPrinters
+	
+	writeOutput("Unmapping all existing queues: " & vbCrlf & Join(ep, vbCrlf))
+	WshShell.LogEvent 4, "Unmapping all existing queues: " & vbCrlf & Join(ep, vbCrlf)
+	For Each queue in ep
+		WSHNetwork.RemovePrinterConnection queue, true, true
+	Next
+	
+	Erase ep
+	Set WshNetwork = Nothing
+End Function
+
 osname = getOSName
 computername = getCitrixHostname
 If InStr(UCase(osname), "SERVER") >= 1 and disableserveros = True Then
@@ -969,7 +997,7 @@ Else
 			WScript.Sleep delaycalculated
 		End If
 		killExisting
-		monitor_interval = mapQueues(computername)
+		monitor_interval = mapQueues(computername, true)
 		If monitor_interval = false Then
 			writeOutput("Active server monitoring is disabled, the script will terminate now")
 			WshShell.LogEvent 2, "Active server monitoring is disabled, the script will terminate now"
