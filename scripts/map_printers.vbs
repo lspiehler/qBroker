@@ -260,7 +260,7 @@ Function mapMissingQueues(bqueues, equeues, dqueue)
 				WshNetwork.AddWindowsPrinterConnection path
 				If Err Then
 					writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
-					WshShell.LogEvent 1, Replace("Error: " & Err.Number & " " & Err.Description & "Failed to map " & path,vbLf,"")
+					WshShell.LogEvent 1, Replace("Error: " & Err.Number & " " & Err.Description & " - Failed to map " & path,vbLf,"")
 					writeOutput("Decreasing expected mapping count by 1 because the queue failed to map")
 					expectedmappingcount = expectedmappingcount - 1
 					'WScript.Echo "-2147023095"
@@ -295,8 +295,19 @@ Function getExistingPrinters()
 
 	Set WshNetwork = WScript.CreateObject("WScript.Network")
 
+	On Error Resume Next
+	Err.Clear
+
 	Set existprinters = WshNetwork.EnumPrinterConnections
 	
+	If Err Then
+		writeOutput("Error: " & Err.Number & " " & Err.Description & " - Failed to get the list of existing printers. This usually happens if the print spooler service is stopped.")
+		WshShell.LogEvent 1, "Error: " & Err.Number & " " & Err.Description & " - Failed to get the list of existing printers. This usually happens if the print spooler service is stopped."
+		'WScript.Quit
+		getExistingPrinters = queues
+		Exit Function
+	End If
+	On Error GoTo 0
 	'Set queues = CreateObject( "System.Collections.ArrayList" )
 	
 	Set WshNetwork = Nothing
@@ -402,7 +413,16 @@ Function removeDuplicateQueues(equeues)
 			writeOutput(path & " will be removed because duplicate detection found another queue mapped with the same name")
 			WshShell.LogEvent 2, path & " will be removed because duplicate detection found another queue mapped with the same name"
 			If takeaction = True Then
+				On Error Resume Next
+				Err.Clear
 				WSHNetwork.RemovePrinterConnection path, true, true
+				If Err Then
+					'if removal fails, printer might be stuck, try adding again and then removing by uncommenting below
+					writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
+					'WSHNetwork.AddWindowsPrinterConnection path
+					'WSHNetwork.RemovePrinterConnection path, true, true
+				End If
+				On Error GoTo 0
 				'equeues.RemoveAt(i)
 				'WScript.Echo Join(equeues, ",")
 				updatedarray = removeIndexFromArray(i, equeues)
@@ -498,7 +518,7 @@ Function httpRequest(url)
 	restReq.open "GET", url, false
 	restReq.setRequestHeader "Accept", "application/xml"
 	restReq.setRequestHeader "Connection", "close"
-	restReq.setRequestHeader "qBroker-Script-Version", "1.2"
+	restReq.setRequestHeader "qBroker-Script-Version", "1.3"
 	restReq.send
 	If Err Then
 		writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
@@ -977,7 +997,18 @@ Function unMapAllQueues()
 	writeOutput("Unmapping all existing queues: " & vbCrlf & Join(ep, vbCrlf))
 	WshShell.LogEvent 4, "Unmapping all existing queues: " & vbCrlf & Join(ep, vbCrlf)
 	For Each queue in ep
-		WSHNetwork.RemovePrinterConnection queue, true, true
+		If takeaction = True Then
+			On Error Resume Next
+			Err.Clear
+			WSHNetwork.RemovePrinterConnection queue, true, true
+			If Err Then
+				'if removal fails, printer might be stuck, try adding again and then removing by uncommenting below
+				writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
+				'WSHNetwork.AddWindowsPrinterConnection path
+				'WSHNetwork.RemovePrinterConnection path, true, true
+			End If
+			On Error GoTo 0
+		End If
 	Next
 	
 	Erase ep
