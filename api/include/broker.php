@@ -46,6 +46,7 @@ class Broker {
         $this->ttl = $servers["ttl"];
         $this->httpresponse['body']['result'] = 'success';
         $this->httpresponse['body']['message'] = null;
+        $this->httpresponse['body']['minimum_version'] = $this->config['minimum_version'];
         $this->httpresponse['body']['monitor_interval'] = $this->config['monitor_interval'];
         $this->httpresponse['body']['kill_active_monitors'] = $this->config['kill_active_monitors'];
         $this->httpresponse['body']['active_server_count'] = count($this->servers);
