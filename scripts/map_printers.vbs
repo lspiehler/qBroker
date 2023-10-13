@@ -1,8 +1,9 @@
 Option Explicit
 'On Error Resume Next
 
-Dim forceremap, disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount, computername
+Dim version, forceremap, disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount, computername
 
+version = "1.4"
 Set NamedArgs = WScript.Arguments.Named
 disableserveros = True
 disablevdi = True
@@ -518,7 +519,7 @@ Function httpRequest(url)
 	restReq.open "GET", url, false
 	restReq.setRequestHeader "Accept", "application/xml"
 	restReq.setRequestHeader "Connection", "close"
-	restReq.setRequestHeader "qBroker-Script-Version", "1.3"
+	restReq.setRequestHeader "qBroker-Script-Version", version
 	restReq.send
 	If Err Then
 		writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
@@ -808,7 +809,7 @@ Function getXMLTextValue(xmlroot, tagname)
 End Function
 
 Function checkServers
-	Dim activeservers, active_servers, Root, objXMLDoc, servercount, active_server_count, activeserver, ep, remap, xml, monitor_interval, kill_active_monitors, i
+	Dim activeservers, active_servers, Root, objXMLDoc, servercount, minversion, minimum_version, active_server_count, activeserver, ep, remap, xml, monitor_interval, kill_active_monitors, i
 	
 	ReDim activeservers(-1)
 	
@@ -848,6 +849,23 @@ Function checkServers
 					monitor_interval = getXMLTextValue(Root, "monitor_interval")
 				End If
 				'Set activeservers = CreateObject( "System.Collections.ArrayList" )
+				Set minimum_version = Root.getElementsByTagName("minimum_version")
+				minversion = CSng(minimum_version(0).text)
+				'WScript.Echo minversion
+				If CSng(version) < minversion Then
+					writeOutput("The min_version returned by qbroker (" & CStr(minversion) & ") is greater than the running version (" & CStr(version) & "). Relaunching to update...")
+					WshShell.LogEvent 2, "The min_version returned by qbroker (" & CStr(minversion) & ") is greater than the running version (" & CStr(version) & "). Relaunching to update..."
+					If strEngine = "CSCRIPT.EXE" Then
+						strCmd = "CSCRIPT.EXE //NoLogo """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay) & " /qbrokerserver:" & qbrokerserver & " /disableserveros:" & CStr(disableserveros) & " /disablevdi:" & CStr(disablevdi) & " /forceremap:False"
+					Else
+						strCmd = "WSCRIPT.EXE """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay) & " /qbrokerserver:" & qbrokerserver & " /disableserveros:" & CStr(disableserveros) & " /disablevdi:" & CStr(disablevdi) & " /forceremap:False"
+					End If
+					wshShell.Run strCmd
+					WScript.Quit
+				Else
+					'WScript.Echo "No need to update"
+				End If
+				Set minimum_version = Nothing
 				Set active_servers = Root.getElementsByTagName("active_servers")
 
 				Set Root = Nothing
@@ -1010,6 +1028,8 @@ Function unMapAllQueues()
 			On Error GoTo 0
 		End If
 	Next
+	
+	WScript.Sleep 15000
 	
 	Erase ep
 	Set WshNetwork = Nothing
