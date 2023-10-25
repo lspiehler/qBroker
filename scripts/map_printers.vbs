@@ -1,13 +1,14 @@
 Option Explicit
 'On Error Resume Next
 
-Dim version, forceremap, disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount, computername
+Dim version, forceremap, vdi, disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount, computername
 
-version = "1.6"
+version = "1.7"
 Set NamedArgs = WScript.Arguments.Named
 disableserveros = True
 disablevdi = True
 forceremap = True
+vdi = False
 
 If NamedArgs.Exists("qbrokerserver") Then
 	qbrokerserver = NamedArgs.Item("qbrokerserver")
@@ -157,6 +158,7 @@ Function getCitrixHostname()
 		getCitrixHostname = getEnvVariable("COMPUTERNAME", true)
 
 	Else
+		vdi = True
 		If disablevdi = True Then
 			writeOutput("Terminating because disablevdi is true and this is a VDI desktop")
 			WshShell.LogEvent 2, "Terminating because disablevdi is true and this is a VDI desktop"
@@ -1070,6 +1072,12 @@ Else
 		killExisting
 		monitor_interval = mapQueues(computername, true)
 		If monitor_interval = false Then
+			If vdi = True Then
+				writeOutput("Because no mapping file was found for this VDI desktop, all print mappings will be removed")
+				WshShell.LogEvent 2, "Because no mapping file was found for this VDI desktop, all print mappings will be removed"
+				WScript.Sleep 120000
+				unMapAllQueues
+			End If
 			writeOutput("Active server monitoring is disabled, the script will terminate now")
 			WshShell.LogEvent 2, "Active server monitoring is disabled, the script will terminate now"
 		Else
