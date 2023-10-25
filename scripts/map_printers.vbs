@@ -3,7 +3,7 @@ Option Explicit
 
 Dim version, forceremap, disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount, computername
 
-version = "1.4"
+version = "1.6"
 Set NamedArgs = WScript.Arguments.Named
 disableserveros = True
 disablevdi = True
@@ -328,6 +328,8 @@ Function getExistingPrinters()
 			queues(j) = existprinters.Item(i)
 			j = j + 1
 			'queues.Add existprinters.Item(i)
+		Else
+			'WScript.Echo existprinters.Item(i)
 		End If
 	Next
 	
@@ -576,7 +578,7 @@ Function mapQueues(computername, firstrun)
 	username = getEnvVariable("USERNAME", true)
 	
 	while success = false
-		Dim url, xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rbq, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval, i
+		Dim unmapcount, url, xml, objXMLDoc, Root, mappingelem, print_mappings, mapping, mappings, prop, props, sources, active_servers, activeserver, activeservers, active_server_count, servercount, print_mapping_count, mappingcount, ep, rbq, rq, dqueue, WshNetwork, server, queue, defq, path, dq, monitor, monitor_interval, i
 	
 		ReDim mappings(-1)
 		ReDim activeservers(-1)
@@ -651,7 +653,7 @@ Function mapQueues(computername, firstrun)
 						writeOutput("No mappings were found using the supplied parameters")
 					Else
 						If forceremap = True And firstrun = True Then
-							unMapAllQueues()
+							unmapcount = unMapAllQueues()
 							'WScript.Quit
 						End If
 						'WScript.Echo UBound(mappings)
@@ -761,6 +763,15 @@ Function mapQueues(computername, firstrun)
 								End If
 								
 								Set WshNetwork = Nothing
+							End If
+							
+							'VDI workaround when mappings cannot be queried at login because a longer delay is necessary
+							If forceremap = True and firstrun = True and unmapcount < 1 Then
+								firstrun = False
+								success = False
+								writeOutput("Warning: qBroker failed to unmap any queues. Getting the list of existing queues may have happened too early. Queues will be remapped again in one minute to prevent duplicate queues from being mapped.")
+								WshShell.LogEvent 2, "Warning: qBroker failed to unmap any queues. Getting the list of existing queues may have happened too early. Queues will be remapped again in one minute to prevent duplicate queues from being mapped."
+								WScript.Sleep 60000
 							End If
 						End If
 					End If
@@ -896,13 +907,17 @@ Function checkServers
 				End If
 					
 				Erase activeservers
-				Erase ep
 							
 				If remap = false Then
 					writeOutput("Mapped queues are all on active servers")
+					'do duplicate queue detection here?
+					removeDuplicateQueues(ep)
 				Else
 					mapQueues computername, false
-				End If	
+				End If
+				
+				Erase ep
+				
 			End If
 		End If
 	End If
@@ -1006,7 +1021,9 @@ Function workstationLocked()
 End Function
 
 Function unMapAllQueues()
-	Dim ep, queue, WshNetwork
+	Dim ep, queue, WshNetwork, count
+	
+	count = 0
 	
 	Set WshNetwork = WScript.CreateObject("WScript.Network")
 	
@@ -1027,12 +1044,15 @@ Function unMapAllQueues()
 			End If
 			On Error GoTo 0
 		End If
+		count = count + 1
 	Next
 	
 	WScript.Sleep 15000
 	
 	Erase ep
 	Set WshNetwork = Nothing
+	
+	unMapAllQueues = count
 End Function
 
 osname = getOSName
