@@ -3,7 +3,7 @@ Option Explicit
 
 Dim version, forceremap, vdi, disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount, computername
 
-version = "1.7"
+version = "1.8"
 Set NamedArgs = WScript.Arguments.Named
 disableserveros = True
 disablevdi = True
@@ -975,11 +975,11 @@ Function killExisting
 	strComputer = "."
 	Set objWMIService = GetObject("winmgmts:{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2")
 	Set colProcess = objWMIService.ExecQuery ("Select * from Win32_Process WHERE (Name = 'wscript.exe' OR Name = 'cscript.exe') AND CommandLine LIKE '%" & scriptname & "%'")
-	If colProcess.count > 5 Then
-		writeOutput(colProcess.count & " duplicate processes were found running. This should never happen. Terminating the process...")
-		WshShell.LogEvent 1, colProcess.count & " duplicate processes were found running. This should never happen. Terminating the process..."
-		WScript.Quit
-	Else
+	'If colProcess.count > 5 Then
+	'	writeOutput(colProcess.count & " duplicate processes were found running. This should never happen. Terminating the process...")
+	'	WshShell.LogEvent 1, colProcess.count & " duplicate processes were found running. This should never happen. Terminating the process..."
+	'	WScript.Quit
+	'Else
 		For Each objProcess in colProcess
 			'only delete the matching processes that aren't the currently running process
 			'WScript.Echo InStr(objProcess.CommandLine, "/id:" & scriptid)
@@ -991,7 +991,7 @@ Function killExisting
 				'Exit Function
 			End If
 		Next
-	End If
+	'End If
 	
 	Set objWMIService = Nothing
 	Set colProcess = Nothing
