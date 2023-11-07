@@ -8,7 +8,7 @@ class MappingGenerator {
     }
 
     public function generateMappings($computername, $server) {
-        if($this->config["auto_onboard_dir"]) {
+        if(array_key_exists("auto_onboard_dir", $this->config)) {
             //mysqli_report(MYSQLI_REPORT_OFF);
             $mysqli = mysqli_init();
             if ($mysqli) {
