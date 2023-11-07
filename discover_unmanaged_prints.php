@@ -45,6 +45,7 @@ if(array_key_exists("auto_unmanaged_dir", $config)) {
                     $data = $result->fetch_all(MYSQLI_ASSOC);
                     //print_r($data);
                     $mappings = array();
+                    $newmappings = array();
                     if(count($data) > 0) {
                         for($i = 0; $i < count($data); $i++) {
                             if(array_key_exists($data[$i]["computername"], $mappings)) {
@@ -61,8 +62,7 @@ if(array_key_exists("auto_unmanaged_dir", $config)) {
                     }
                     foreach($mappings as $key => $mapping) {
                         if (!file_exists($config['mount_dir'] . "/" . $config['computer_dir'] . "/" . strtoupper($key) . ".txt")) {
-                            echo $key;
-                            print_r($mapping);
+                            $newmappings[$key] = $mapping;
                             $fp = fopen($config['mount_dir'] . "/" . $config["auto_unmanaged_dir"] . "/". strtoupper($key) .".txt", 'w');
                             if($fp) {
                                 fwrite($fp, implode("\r\n", $mapping));
@@ -70,6 +70,8 @@ if(array_key_exists("auto_unmanaged_dir", $config)) {
                             }
                         }
                     }
+                    header('Content-type: application/json');
+                    echo json_encode($newmappings, JSON_PRETTY_PRINT);
                 } catch(Throwable $e) {
                     //don't show any errors
                     echo $e;
