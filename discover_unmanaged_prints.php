@@ -23,8 +23,9 @@ if(array_key_exists("auto_unmanaged_dir", $config)) {
             $sql1 = <<<EOD
     SELECT `computername`, `queue`, COUNT(`queue`) AS `total_prints`, MAX(`event_datetime`) AS `most_recent`, `printserver`, `username`
     FROM `print_log`
-    WHERE `printserver` LIKE 'LCMC-PRTSRV%'
-    AND `event_datetime` > NOW() - INTERVAL 24 HOUR
+    WHERE `event_datetime` > NOW() - INTERVAL 24 HOUR
+    AND `printserver` NOT LIKE 'EPIC%'
+    AND `printserver` NOT LIKE '%EPS%'
     AND `computername` NOT LIKE ('%CTX%')
     AND `computername` NOT LIKE ('%VDI%')
     AND `computername` NOT LIKE ('%EPS%')
