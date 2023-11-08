@@ -3,7 +3,7 @@ Option Explicit
 
 Dim version, forceremap, vdi, disablevdi, disableserveros, qbrokerserver, NamedArgs, Arg, scriptid, scriptuser, delay, delaycalculated, wshShell, strEngine, verbose, scriptname, locked_workstation_interval, failure_retry_interval, failure_monitor_interval, monitor_interval, site, takeaction, removeunmanagedqueues, osname, expectedmappingcount, returnedmappingcount, computername
 
-version = "1.8"
+version = "1.91"
 Set NamedArgs = WScript.Arguments.Named
 disableserveros = True
 disablevdi = True
@@ -161,7 +161,7 @@ Function getCitrixHostname()
 		vdi = True
 		If disablevdi = True Then
 			writeOutput("Terminating because disablevdi is true and this is a VDI desktop")
-			WshShell.LogEvent 2, "Terminating because disablevdi is true and this is a VDI desktop"
+			logEvent 2, "Terminating because disablevdi is true and this is a VDI desktop"
 			WScript.Quit
 		End If
 		getCitrixHostname = UCase(dwValue)
@@ -189,7 +189,7 @@ Function setDefaultPrinter(printer)
 	Next
 	If Err Then
 		writeOutput(Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,""))
-		WshShell.LogEvent 1, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
+		logEvent 1, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
 	End If
 	On Error GoTo 0
 	
@@ -263,7 +263,7 @@ Function mapMissingQueues(bqueues, equeues, dqueue)
 				WshNetwork.AddWindowsPrinterConnection path
 				If Err Then
 					writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
-					WshShell.LogEvent 1, Replace("Error: " & Err.Number & " " & Err.Description & " - Failed to map " & path,vbLf,"")
+					logEvent 1, Replace("Error: " & Err.Number & " " & Err.Description & " - Failed to map " & path,vbLf,"")
 					writeOutput("Decreasing expected mapping count by 1 because the queue failed to map")
 					expectedmappingcount = expectedmappingcount - 1
 					'WScript.Echo "-2147023095"
@@ -305,7 +305,7 @@ Function getExistingPrinters()
 	
 	If Err Then
 		writeOutput("Error: " & Err.Number & " " & Err.Description & " - Failed to get the list of existing printers. This usually happens if the print spooler service is stopped.")
-		WshShell.LogEvent 1, "Error: " & Err.Number & " " & Err.Description & " - Failed to get the list of existing printers. This usually happens if the print spooler service is stopped."
+		logEvent 1, "Error: " & Err.Number & " " & Err.Description & " - Failed to get the list of existing printers. This usually happens if the print spooler service is stopped."
 		'WScript.Quit
 		getExistingPrinters = queues
 		Exit Function
@@ -319,7 +319,7 @@ Function getExistingPrinters()
 	'Exit Function
 	j = 0
 	For i = 0 to existprinters.Count - 1 Step 1
-		If Left(ucase(existprinters.Item(i)),2) = "\\" Then
+		If Left(ucase(existprinters.Item(i)),2) = "\\" And Not Left(ucase(existprinters.Item(i)),12) = "\\CLIENT\COM" Then
 			'Set queue = CreateObject("Scripting.Dictionary")
 			'splitqueue = Split(existprinters.Item(i), "\")
 			'servername = splitqueue(2)
@@ -416,7 +416,7 @@ Function removeDuplicateQueues(equeues)
 		path = "\\" & server & "\" & queue
 		If checkDuplicateQueue(i, queue, equeues) = True Then
 			writeOutput(path & " will be removed because duplicate detection found another queue mapped with the same name")
-			WshShell.LogEvent 2, path & " will be removed because duplicate detection found another queue mapped with the same name"
+			logEvent 2, path & " will be removed because duplicate detection found another queue mapped with the same name"
 			If takeaction = True Then
 				On Error Resume Next
 				Err.Clear
@@ -466,7 +466,7 @@ Function removeBadQueues(onlineservers, bqueues, equeues)
 		If checkManagedQueue(bqueues, equeues(i)) = False Then
 			If removeunmanagedqueues = True Then
 				writeOutput("Removing unmanaged queue " & path)
-				WshShell.LogEvent 2, path & " will be removed because no mapping was found for it"
+				logEvent 2, path & " will be removed because no mapping was found for it"
 				delete = True
 			Else
 				writeOutput("Skipping removal of unmanaged queue " & path & " because removeunmanagedqueues = False")
@@ -476,7 +476,7 @@ Function removeBadQueues(onlineservers, bqueues, equeues)
 				writeOutput(server & " is still online for " & queue)
 			Else
 				writeOutput(server & " was not found in the online server list for " & path)
-				WshShell.LogEvent 2, path & " will be removed because " & server & " was not found in the online server list"
+				logEvent 2, path & " will be removed because " & server & " was not found in the online server list"
 				delete = True
 			End If
 		End If
@@ -527,7 +527,7 @@ Function httpRequest(url)
 	restReq.send
 	If Err Then
 		writeOutput(Replace("Error: " & Err.Number & " " & Err.Description,vbLf,""))
-		WshShell.LogEvent 1, "Failed to make a connection to the qbroker server " & qbrokerserver & ":" & vbCrlf & vbCrlf & Replace(Err.Description, vbLf, "")
+		logEvent 1, "Failed to make a connection to the qbroker server " & qbrokerserver & ":" & vbCrlf & vbCrlf & Replace(Err.Description, vbLf, "")
 		httpRequest = false
 		Exit Function
 	End If
@@ -542,7 +542,7 @@ Function httpRequest(url)
 
 	If status <> 200 Then
 		writeOutput("Received a http " & status & " from the qbroker server " & qbrokerserver & ": " & Replace(response, vbLf, ""))
-		WshShell.LogEvent 1, "Received a http " & status & " from the qbroker server " & qbrokerserver & ":" & vbCrlf & vbCrlf & Replace(response, vbLf, "")
+		logEvent 1, "Received a http " & status & " from the qbroker server " & qbrokerserver & ":" & vbCrlf & vbCrlf & Replace(response, vbLf, "")
 		httpRequest = false
 	Else
 		httpRequest = response
@@ -562,7 +562,7 @@ Function checkMappedQueues(onlineservers, equeues)
 			path = "\\" & server & "\" & queue
 			writeOutput(server & " was not found in the online server list for " & path)
 			writeOutput("Requesting queues to be remapped because at least one was found on an inactive server")
-			WshShell.LogEvent 2, server & " was not found in the online server list for " & path & ". Requesting queues to be remapped because at least one was found on an inactive server."
+			logEvent 2, server & " was not found in the online server list for " & path & ". Requesting queues to be remapped because at least one was found on an inactive server."
 			checkMappedQueues = true
 			Exit Function
 		End If
@@ -651,7 +651,7 @@ Function mapQueues(computername, firstrun)
 					expectedmappingcount = mappingcount
 					returnedmappingcount = mappingcount
 					If mappingcount < 1 Then
-						WshShell.LogEvent 2, "No mappings were found using the supplied parameters in request to " & url
+						logEvent 2, "No mappings were found using the supplied parameters in request to " & url
 						writeOutput("No mappings were found using the supplied parameters")
 					Else
 						If forceremap = True And firstrun = True Then
@@ -722,7 +722,7 @@ Function mapQueues(computername, firstrun)
 							
 							Erase rbq
 							
-							WshShell.LogEvent 4, "The following printers will be mapped per the response from " & url & ": " & vbCrlf & vbCrlf & Join(mappings, vbCrlf)
+							logEvent 4, "The following printers will be mapped per the response from " & url & ": " & vbCrlf & vbCrlf & Join(mappings, vbCrlf)
 							
 							dq = mapMissingQueues(mappings, rq, dqueue)
 							
@@ -731,7 +731,7 @@ Function mapQueues(computername, firstrun)
 							
 							If IsEmpty(dq) Then
 								writeOutput("No default printer was specified")
-								WshShell.LogEvent 2, "No default printer was specified."
+								logEvent 2, "No default printer was specified."
 							Else
 								writeOutput("Setting default printer to " & dq)						
 								'For Each mapping In mappings
@@ -747,7 +747,7 @@ Function mapQueues(computername, firstrun)
 									WshNetwork.SetDefaultPrinter dq
 									If Err Then
 										writeOutput(Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,""))
-										WshShell.LogEvent 1, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
+										logEvent 1, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
 									End If
 									On Error GoTo 0
 									setDefaultPrinter(dq)
@@ -758,7 +758,7 @@ Function mapQueues(computername, firstrun)
 									WshNetwork.SetDefaultPrinter dq
 									If Err Then
 										writeOutput(Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,""))
-										WshShell.LogEvent 1, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
+										logEvent 1, Replace("Error: " & Err.Number & " Failed to set default printer because " & LCase(Err.Description),vbLf,"")
 									End If
 									On Error GoTo 0
 									setDefaultPrinter(dq)
@@ -772,7 +772,7 @@ Function mapQueues(computername, firstrun)
 								firstrun = False
 								success = False
 								writeOutput("Warning: qBroker failed to unmap any queues. Getting the list of existing queues may have happened too early. Queues will be remapped again in one minute to prevent duplicate queues from being mapped.")
-								WshShell.LogEvent 2, "Warning: qBroker failed to unmap any queues. Getting the list of existing queues may have happened too early. Queues will be remapped again in one minute to prevent duplicate queues from being mapped."
+								logEvent 2, "Warning: qBroker failed to unmap any queues. Getting the list of existing queues may have happened too early. Queues will be remapped again in one minute to prevent duplicate queues from being mapped."
 								WScript.Sleep 60000
 							End If
 						End If
@@ -867,7 +867,7 @@ Function checkServers
 				'WScript.Echo minversion
 				If CSng(version) < minversion Then
 					writeOutput("The min_version returned by qbroker (" & CStr(minversion) & ") is greater than the running version (" & CStr(version) & "). Relaunching to update...")
-					WshShell.LogEvent 2, "The min_version returned by qbroker (" & CStr(minversion) & ") is greater than the running version (" & CStr(version) & "). Relaunching to update..."
+					logEvent 2, "The min_version returned by qbroker (" & CStr(minversion) & ") is greater than the running version (" & CStr(version) & "). Relaunching to update..."
 					If strEngine = "CSCRIPT.EXE" Then
 						strCmd = "CSCRIPT.EXE //NoLogo """ & WScript.ScriptFullName & """ /id:" & RandomString(20) & " /user:" & getEnvVariable("USERNAME", true) & " /delay:" & CStr(delay) & " /qbrokerserver:" & qbrokerserver & " /disableserveros:" & CStr(disableserveros) & " /disablevdi:" & CStr(disablevdi) & " /forceremap:False"
 					Else
@@ -941,7 +941,7 @@ Function serverMonitor
 			monitor_interval = checkServers
 			If monitor_interval = false Then
 				writeOutput("kill_active_monitors is set to true, the script will now terminate")
-				WshShell.LogEvent 2, "kill_active_monitors is set to true, the script will now terminate"
+				logEvent 2, "kill_active_monitors is set to true, the script will now terminate"
 				Exit Do
 			Else
 				writeOutput("Monitoring is enabled, checking active servers in " & monitor_interval / 1000 & " seconds")
@@ -977,7 +977,7 @@ Function killExisting
 	Set colProcess = objWMIService.ExecQuery ("Select * from Win32_Process WHERE (Name = 'wscript.exe' OR Name = 'cscript.exe') AND CommandLine LIKE '%" & scriptname & "%'")
 	'If colProcess.count > 5 Then
 	'	writeOutput(colProcess.count & " duplicate processes were found running. This should never happen. Terminating the process...")
-	'	WshShell.LogEvent 1, colProcess.count & " duplicate processes were found running. This should never happen. Terminating the process..."
+	'	logEvent 1, colProcess.count & " duplicate processes were found running. This should never happen. Terminating the process..."
 	'	WScript.Quit
 	'Else
 		For Each objProcess in colProcess
@@ -1022,6 +1022,18 @@ Function workstationLocked()
     workstationLocked = (logonScreenCount > 0)
 End Function
 
+Function logEvent(level, message)
+
+	On Error Resume Next
+	Err.Clear
+	WshShell.LogEvent level, message
+	If Err Then
+		writeOutput("Failed to write to the event log. This is usually because the ""Windows Event Log"" service is stopped.")
+	End If
+	On Error GoTo 0
+	
+End Function
+
 Function unMapAllQueues()
 	Dim ep, queue, WshNetwork, count
 	
@@ -1032,7 +1044,7 @@ Function unMapAllQueues()
 	ep = getExistingPrinters
 	
 	writeOutput("Unmapping all existing queues: " & vbCrlf & Join(ep, vbCrlf))
-	WshShell.LogEvent 4, "Unmapping all existing queues: " & vbCrlf & Join(ep, vbCrlf)
+	logEvent 4, "Unmapping all existing queues: " & vbCrlf & Join(ep, vbCrlf)
 	For Each queue in ep
 		If takeaction = True Then
 			On Error Resume Next
@@ -1061,7 +1073,7 @@ osname = getOSName
 computername = getCitrixHostname
 If InStr(UCase(osname), "SERVER") >= 1 and disableserveros = True Then
 	writeOutput("Terminating because OS ("& osname &") is a server.")
-	WshShell.LogEvent 2, "Terminating because OS ("& osname &") is a server."
+	logEvent 2, "Terminating because OS ("& osname &") is a server."
 Else
 	'site = getADSite
 	'If strInArray(site, Array("TOURO", "NOEH", "UMC", "", "EPIC")) Then
@@ -1074,16 +1086,16 @@ Else
 		If monitor_interval = false Then
 			If vdi = True Then
 				writeOutput("Because no mapping file was found for this VDI desktop, all print mappings will be removed")
-				WshShell.LogEvent 2, "Because no mapping file was found for this VDI desktop, all print mappings will be removed"
+				logEvent 2, "Because no mapping file was found for this VDI desktop, all print mappings will be removed"
 				WScript.Sleep 120000
 				unMapAllQueues
 			End If
 			writeOutput("Active server monitoring is disabled, the script will terminate now")
-			WshShell.LogEvent 2, "Active server monitoring is disabled, the script will terminate now"
+			logEvent 2, "Active server monitoring is disabled, the script will terminate now"
 		Else
 			'If checkAlreadyRunning = false Then
 				writeOutput("Monitoring is enabled, checking active servers in " & monitor_interval / 1000 & " seconds")
-				WshShell.LogEvent 4, "Monitoring is enabled, checking active servers in " & monitor_interval / 1000 & " seconds"
+				logEvent 4, "Monitoring is enabled, checking active servers in " & monitor_interval / 1000 & " seconds"
 				WScript.Sleep Clng(monitor_interval)
 				serverMonitor
 			'Else
