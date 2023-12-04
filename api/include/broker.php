@@ -88,10 +88,11 @@ class Broker {
                             $isdefault = stripos($filemappings[$i], $this->config['default_string']);
                             $path = $this->updatePath(trim($explodeline[3]));
                             if($isdefault!==false) {
-                                $this->default = $path;
+                                $this->default = strtoupper($path);
                             }
-                            if(!array_key_exists($path, $mappingsht)) {
-                                $mappingsht[$path] = array(
+                            if(!array_key_exists(strtoupper($path), $mappingsht)) {
+                                $mappingsht[strtoupper($path)] = array(
+                                    'path' => $path,
                                     'default' => false,
                                     'source' => array('computername')
                                 );
@@ -119,17 +120,18 @@ class Broker {
                             $isdefault = stripos($filemappings[$i], $this->config['default_string']);
                             $path = $this->updatePath(trim($explodeline[3]));
                             if($isdefault!==false) {
-                                $this->default = $path;
+                                $this->default = strtoupper($path);
                             }
-                            if(!array_key_exists($path, $mappingsht)) {
-                                $mappingsht[$path] = array(
+                            if(!array_key_exists(strtoupper($path), $mappingsht)) {
+                                $mappingsht[strtoupper($path)] = array(
+                                    'path' => $path,
                                     'default' => false,
                                     'source' => array('username')
                                 );
                             } else {
                                 //echo "skipped " . $path;
-                                if(!in_array('username', $mappingsht[$path]['source'])) {
-                                    array_push($mappingsht[$path]['source'], 'username');
+                                if(!in_array('username', $mappingsht[strtoupper($path)]['source'])) {
+                                    array_push($mappingsht[strtoupper($path)]['source'], 'username');
                                 }
                             }
                         }
@@ -160,7 +162,7 @@ class Broker {
                     if($value['default'] === true) {
                         $default = true;
                     }
-                    $parsepath = explode("\\", $key);
+                    $parsepath = explode("\\", $mappingsht[strtoupper($key)]['path']);
                     $server = $parsepath[2];
                     $queue = $parsepath[3];
                     $mapping = array(
