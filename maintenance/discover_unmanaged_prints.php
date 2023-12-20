@@ -4,11 +4,11 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-if(! $json = @file_get_contents(__DIR__ . '/config.js'))
-    throw new Exception ('../config.js does not exist');
+if(! $json = @file_get_contents(__DIR__ . '/../config.js'))
+    throw new Exception ('/../config.js does not exist');
 $config = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
-require __DIR__ . '/api/include/balancer.php';
+require __DIR__ . '/../api/include/balancer.php';
 $balancer = new Balancer($config);
 $servers = $balancer->getServers();
 $server = $balancer->getBrokeredServer();
@@ -17,7 +17,8 @@ if(array_key_exists("auto_unmanaged_dir", $config)) {
     if ($mysqli) {
         $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 3);
         $mysqli->options(MYSQLI_OPT_READ_TIMEOUT, 3);
-        @$mysqli->real_connect($config["db_rw_host"], $config["db_user"], $config["db_pass"], $config["db_report_name"]);
+        @$mysqli->real_connect("lcmc-qbroker01.lcmchealth.org", "qbroker", "XaHTJtgo8xYFJv3WHSokQmMk", $config["db_report_name"]);
+        //@$mysqli->real_connect($config["db_rw_host"], $config["db_user"], $config["db_pass"], $config["db_report_name"]);
 
         if (!$mysqli->connect_error) {
             $sql1 = <<<EOD
