@@ -13,7 +13,7 @@ class Balancer {
     }
 
     public function getServers(): array {
-        $this->servers = array(
+        /*$this->servers = array(
             'lcmc-prtsrv01.lcmchealth.org',
             'lcmc-prtsrv02.lcmchealth.org',
             //'lcmc-prtsrv03.lcmchealth.org',
@@ -27,7 +27,7 @@ class Balancer {
             'error' => false,
             'ttl' => 0,
             'servers' => $this->servers
-        );
+        );*/
         $lookup = $this->srvlookup->lookupServers();
         $this->servers = array();
         $ttl = 0;
@@ -54,8 +54,8 @@ class Balancer {
     public function getBrokeredServer(): array {
         return array(
             'error' => false,
-            'server' => $this->servers[array_rand($this->servers, 1)]
-            //'server' => $this->servers[0]
+            //'server' => $this->servers[array_rand($this->servers, 1)]
+            'server' => $this->servers[0]
         );
     }
 }

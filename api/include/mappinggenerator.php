@@ -14,8 +14,7 @@ class MappingGenerator {
             if ($mysqli) {
                 $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 3);
                 $mysqli->options(MYSQLI_OPT_READ_TIMEOUT, 3);
-                @$mysqli->real_connect("lcmc-qbroker01.lcmchealth.org", "qbroker", "XaHTJtgo8xYFJv3WHSokQmMk", $this->config["db_report_name"]);
-                //@$mysqli->real_connect($this->config["db_rw_host"], $this->config["db_user"], $this->config["db_pass"], $this->config["db_report_name"]);
+                @$mysqli->real_connect($this->config["db_rw_host"], $this->config["db_user"], $this->config["db_pass"], $this->config["db_report_name"]);
         
                 if (!$mysqli->connect_error) {
                     $sql1 = "SELECT COUNT(`id`) AS `total`, `printername`, MAX(`default`) AS `default` FROM `printers` WHERE `computername` = ? GROUP BY `printername` ORDER BY `default` DESC, `total` DESC";
