@@ -62,4 +62,4 @@ hostname = getCitrixHostname
 username = getEnvVariable("USERNAME", true)
 
 Set objShell = CreateObject("WScript.Shell")
-objShell.Run "https://printermappings.lcmchealth.org/api/mappings/" & hostname & "/" & username
+objShell.Run "https://printermappings.lcmchealth.org/selfservice?computername=" & hostname
