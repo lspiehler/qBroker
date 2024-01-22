@@ -1,3 +1,26 @@
+<?php
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+if(! $json = @file_get_contents(__DIR__ . '/../config.js'))
+    throw new Exception ('/../config.js does not exist');
+$config = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+
+$admin = false;
+if(array_key_exists('OIDC_CLAIM_groups', $_SERVER)) {
+    if(strtoupper($_SERVER['OIDC_CLAIM_groups'])==strtoupper($config['admin_group_name'])) {
+        $admin = true;
+    }
+}
+
+$computername = '';
+if(array_key_exists('computername', $_GET)) {
+    $computername = $_GET['computername'];
+}
+
+?>
 <!--https://bootstrap-autocomplete.readthedocs.io/en/latest/-->
 <!DOCTYPE html>
 <html>
@@ -10,48 +33,19 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
         <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-        <script>
-            /*window.onload = function() {
-                let options = {
-                    path: '/api/mappings/<?php echo $_GET['hostname']; ?>/<?php echo $_GET['username']; ?>',
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }
-                httpRequest({options: options}, function(err, resp) {
-                    if(err) {
-                        alert(err);
-                    } else {
-                        console.log(resp);
-                        let body = document.body;
-                        let table = document.createElement("table");
-                        let allprinters = [];
-                        for(let i = 0; i < resp.body.print_mappings.mapping.length; i++) {
-                            let row = table.insertRow(table.rows.length);
-                            let cell = row.insertCell(0);
-                            let a = document.createElement("a");
-                            let queue = resp.body.print_mappings.mapping[i].queue + "@" + resp.body.print_mappings.mapping[i].server;
-                            allprinters.push(queue);
-                            a.href = "printer://" + queue;
-                            a.innerText = resp.body.print_mappings.mapping[i].queue;
-                            cell.appendChild(a);
-                        }
-                        body.appendChild(table);
-                        let button = document.createElement('button');
-                        button.innerText = "Map All Printers";
-                        button.addEventListener('click', function(e) {
-                            window.location = "printer://" + allprinters.join(";");
-                        });
-                        body.appendChild(button);
-                        window.location = "printer://" + allprinters.join(";");
-                    }
-                });
-            }*/
-        </script>
     </head>
     <body>
         <div class="container">
+            <div class="row align-items-center vh-100">
+                <div class="col-xl-6 col-lg-6 col-md-8 col-sm-12 col-12 mx-auto text-center">
+                    <img width="400px;" src="/include/img/LCMC_Health_Logo.jpg" />
+                </div>
+            </div>
+            <div class="row align-items-center vh-100">
+                <div class="col-xl-6 col-lg-6 col-md-8 col-sm-12 col-12 mx-auto text-center">
+                    <h1>LCMC Self-Service Printing</h1>
+                </div>
+            </div>
             <div class="row align-items-center vh-100">
                 <div class="col-xl-6 col-lg-6 col-md-8 col-sm-12 col-12 mx-auto">
                     <div class="card shadow border">
@@ -59,7 +53,7 @@
                             <form id="upform">
                                 <div class="form-group">
                                     <label for="computername">Computer Name</label>
-                                    <input id="computername" aria-describedby="computernameHelp" placeholder="Failed to find your computer name" class="form-control" readonly value="<?php echo $_GET['computername'] ?>" style="width: 400px;"/>
+                                    <input id="computername" aria-describedby="computernameHelp" placeholder="Failed to find your computer name" class="form-control" readonly value="<?php echo $computername ?>" style="width: 400px;"/>
                                 </div>
                                 <label for="printerlist">Printers</label>
                                 <div class="form-group">
@@ -79,6 +73,18 @@
                             </form>
                         </div>
                     </div>
+                </div>
+            </div>
+            <div class="row align-items-center vh-100">
+                <div class="col-xl-6 col-lg-6 col-md-8 col-sm-12 col-12 mx-auto text-center">
+                    <small>Logged in as
+                    <?php
+                        echo $_SERVER['OIDC_CLAIM_upn'];
+                        if($admin===true) {
+                            echo " with admin privileges";
+                        }
+                    ?>
+                    </small>
                 </div>
             </div>
         </div>
@@ -109,7 +115,7 @@
             }
 
             let data = [{
-                computername: computername.value,
+                computername: computername.value.toUpperCase(),
                 queues: [],
                 default: dp
             }];
@@ -125,9 +131,23 @@
                 url: '/api/update_mappings',
                 data: JSON.stringify(data),
                 success: function(data, status){
+                    //console.log(status);
                     //alert("Data: " + JSON.stringify(data) + "\nStatus: " + status);
                     updateprinters.disabled = false;
                     window.location = 'printer://update';
+                },
+                error: function(request, status, error){
+                    //console.log(request);
+                    //console.log(status);
+                    //console.log(error);
+                    if(request.status==401) {
+                        location.reload();
+                    } else {
+                        alert('Request error: ' + error);
+                    }
+                    //alert("Data: " + JSON.stringify(data) + "\nStatus: " + status);
+                    //updateprinters.disabled = false;
+                    //window.location = 'printer://update';
                 }
             });
             e.preventDefault();
@@ -213,6 +233,16 @@
             });
 
             var computername = document.getElementById('computername').value.trim();
+            <?php
+
+            if($admin===true) {
+                echo <<<STRING
+                cnelem = document.getElementById('computername');
+                cnelem.removeAttribute('readonly');
+                STRING;
+            }
+
+            ?>
             if(computername != "") {
                 $.ajax({url: "/api/mappings/" + computername, success: function(result){
                     //let queues = [];
@@ -250,12 +280,25 @@
                     initialized = true;
                 }});
             } else {
-                cnelem = document.getElementById('computername');
-                upelem = document.getElementById('updateprinters');
-                cnelem.value = 'Failed to determine computername';
-                cnelem.style = 'color: red;';
-                upelem.disabled = true;
-                $('.js-example-basic-multiple').prop('disabled', 'true');
+                <?php
+
+                if($admin===true) {
+                    echo <<<STRING
+                    cnelem = document.getElementById('computername');
+                    cnelem.placeholder = 'Enter a valid computername';
+                    cnelem.removeAttribute('readonly');
+                    STRING;
+                } else {
+                    echo <<<STRING
+                    cnelem = document.getElementById('computername');
+                    upelem = document.getElementById('updateprinters');
+                    cnelem.value = 'Failed to determine computername';
+                    cnelem.style = 'color: red;';
+                    upelem.disabled = true;
+                    $('.js-example-basic-multiple').prop('disabled', 'true');
+                    STRING;
+                }
+                ?>
             }
 
             document.getElementById('upform').addEventListener('submit', function(e) {
