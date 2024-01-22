@@ -53,7 +53,7 @@ if(array_key_exists('computername', $_GET)) {
                             <form id="upform">
                                 <div class="form-group">
                                     <label for="computername">Computer Name</label>
-                                    <input id="computername" aria-describedby="computernameHelp" placeholder="Failed to find your computer name" class="form-control" readonly value="<?php echo $computername ?>" style="width: 400px;"/>
+                                    <input id="computername" onchange="updateExistingPrinters();" aria-describedby="computernameHelp" placeholder="Failed to find your computer name" class="form-control" readonly value="<?php echo $computername ?>" style="width: 400px;"/>
                                 </div>
                                 <label for="printerlist">Printers</label>
                                 <div class="form-group">
@@ -232,7 +232,6 @@ if(array_key_exists('computername', $_GET)) {
                 }
             });
 
-            var computername = document.getElementById('computername').value.trim();
             <?php
 
             if($admin===true) {
@@ -243,6 +242,30 @@ if(array_key_exists('computername', $_GET)) {
             }
 
             ?>
+
+            updateExistingPrinters();
+
+            document.getElementById('upform').addEventListener('submit', function(e) {
+                submitForm(e);
+            });
+        });
+
+        function clearDefaultPrinterList() {
+            let dp = document.getElementById("defaultprinter");
+            dp.options.length = 0;
+            let option = document.createElement('option');
+            option.value = 0;
+            option.innerText = 'No default';
+            dp.add(option);
+        }
+
+        function updateExistingPrinters() {
+            clearDefaultPrinterList();
+            var computername = document.getElementById('computername').value.trim();
+            $('.js-example-basic-multiple')
+            .val(null)
+            .trigger('change')
+            .prop('disabled', false);
             if(computername != "") {
                 $.ajax({url: "/api/mappings/" + computername, success: function(result){
                     //let queues = [];
@@ -285,6 +308,8 @@ if(array_key_exists('computername', $_GET)) {
                 if($admin===true) {
                     echo <<<STRING
                     cnelem = document.getElementById('computername');
+                    plelem = document.getElementById('printerlist');
+                    $('.js-example-basic-multiple').prop('disabled', true);
                     cnelem.placeholder = 'Enter a valid computername';
                     cnelem.removeAttribute('readonly');
                     STRING;
@@ -300,11 +325,7 @@ if(array_key_exists('computername', $_GET)) {
                 }
                 ?>
             }
-
-            document.getElementById('upform').addEventListener('submit', function(e) {
-                submitForm(e);
-            });
-        });
+        }
 
         function formatQueueSelection (queue) {
             return queue.text;
