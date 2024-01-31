@@ -131,10 +131,10 @@ if(array_key_exists('computername', $_GET)) {
                 url: '/api/update_mappings',
                 data: JSON.stringify(data),
                 success: function(data, status){
-                    //console.log(status);
+                    console.log(data);
                     //alert("Data: " + JSON.stringify(data) + "\nStatus: " + status);
                     updateprinters.disabled = false;
-                    window.location = 'printer://update';
+                    window.location = 'printer://update/' + computername.value.toUpperCase();
                 },
                 error: function(request, status, error){
                     //console.log(request);
