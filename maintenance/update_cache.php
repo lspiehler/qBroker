@@ -72,7 +72,11 @@ if(count($json_result) > 1000) {
                         $queue = $json_result[$i]->Name;
                         $ip = substr($json_result[$i]->PortName[0], 0, 20);
                         $driver = substr($json_result[$i]->DriverName[0], 0, 50);
-                        $location = substr($json_result[$i]->Location[0], 0, 200);
+                        if(count($json_result[$i]->Location) > 0) {
+                            $location = substr($json_result[$i]->Location[0], 0, 200);
+                        } else {
+                            $location = "";
+                        }
                         if(count($json_result[$i]->Comment) > 0) {
                             $comment = substr($json_result[$i]->Comment[0], 0, 200);
                         } else {
